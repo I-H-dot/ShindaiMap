@@ -5,7 +5,7 @@
 ## 外部サービス
 
 - 過去のコミットには、開発時に使っていたFirebase Webアプリ設定とプロジェクトIDが含まれています。公開前にFirebase側で対象設定を無効化し、Git履歴から削除してください。
-- 本番用Google Maps APIキーには、HTTPリファラーと利用APIの制限を設定してください。
+- 本番用Google Maps APIキーには、HTTPリファラーと利用APIの制限を設定してから、Actions変数`ENABLE_GOOGLE_MAPS=true`で有効化してください。
 
 ## GitとGitHub
 

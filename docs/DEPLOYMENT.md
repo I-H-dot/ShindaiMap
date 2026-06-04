@@ -28,7 +28,14 @@ Google Mapsを有効にする場合だけ、Google Cloud Consoleでブラウザ�
 - Website restriction: `https://ishizukahiroto.github.io/ShindaiMap/*`
 - API restrictions: Maps JavaScript API
 
-設定したキーはGitHubリポジトリの`Settings > Secrets and variables > Actions > New repository secret`で、`PUBLIC_GOOGLE_MAPS_API_KEY`という名前のSecretとして登録してください。
+設定したキーはGitHubリポジトリの`Settings > Secrets and variables > Actions > Secrets > New repository secret`で、`PUBLIC_GOOGLE_MAPS_API_KEY`という名前のSecretとして登録してください。
+
+キーの制限を確認した後、同じ画面の`Variables > New repository variable`で次を登録すると、次回デプロイからGoogle Mapsが有効になります。
+
+- Name: `ENABLE_GOOGLE_MAPS`
+- Value: `true`
+
+`ENABLE_GOOGLE_MAPS`が未設定または`true`以外の場合、Secretを登録済みでも公開ビルドには含めず、フォールバック地図を使用します。
 
 ## ローカルでPages向けビルドを確認する
 

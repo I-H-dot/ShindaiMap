@@ -11,6 +11,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: github-pages
   cancel-in-progress: false
@@ -27,7 +30,7 @@ jobs:
       - name: Install, build, and upload site
         uses: withastro/action@v5
         env:
-          PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.PUBLIC_GOOGLE_MAPS_API_KEY }}
+          PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.ENABLE_GOOGLE_MAPS == 'true' && secrets.PUBLIC_GOOGLE_MAPS_API_KEY || '' }}
 
   deploy:
     needs: build
