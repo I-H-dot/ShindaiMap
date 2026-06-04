@@ -24,7 +24,7 @@ const description = `${category.label} | 神大Map`;
     </section>
     <section class="facility-list-page">
       {matchingFacilities.map((facility) => (
-        <a class="facility-link-card" href={withBasePath(`/facilities/${facility.id}/`)}>
+        <a class="facility-link-card" href={withBasePath(`/?facility=${facility.id}`)}>
           <span>{facility.campus}</span>
           <strong>{facility.name}</strong>
         </a>
