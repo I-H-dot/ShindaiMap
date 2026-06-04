@@ -1,0 +1,41 @@
+name: バグ報告
+description: 再現可能な不具合を報告する
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: セキュリティ問題は公開Issueに書かず、SECURITY.mdの手順で報告してください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 発生している問題を簡潔に説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 環境
+      description: OS、ブラウザ、端末、画面幅など
+  - type: textarea
+    id: additional
+    attributes:
+      label: 補足
+      description: スクリーンショットやログから秘密情報・個人情報を除いて添付してください。

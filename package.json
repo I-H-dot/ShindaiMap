@@ -1,0 +1,51 @@
+{
+  "name": "shindai-map",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Unofficial open-source campus map for Kobe University.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IshizukaHiroto/ShindaiMap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IshizukaHiroto/ShindaiMap/issues"
+  },
+  "homepage": "https://github.com/IshizukaHiroto/ShindaiMap#readme",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro check && ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview --host 127.0.0.1",
+    "test": "vitest run",
+    "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "check": "npm run test && npm run build"
+  },
+  "dependencies": {
+    "@astrojs/react": "^4.4.2",
+    "@astrojs/sitemap": "^3.6.0",
+    "@googlemaps/js-api-loader": "^1.16.10",
+    "astro": "^6.4.2",
+    "fuse.js": "^7.1.0",
+    "lucide-react": "^0.555.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@types/google.maps": "^3.58.1",
+    "@types/react": "^18.3.29",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "overrides": {
+    "yaml-language-server": {
+      "yaml": "^2.8.3"
+    }
+  },
+  "packageManager": "npm@11.6.2"
+}

@@ -1,0 +1,43 @@
+name: 施設情報の追加・修正
+description: 施設情報の誤りや追加候補を報告する
+title: "[Data]: "
+labels:
+  - data
+body:
+  - type: input
+    id: facility
+    attributes:
+      label: 対象施設
+      description: 施設名、公式地図番号、キャンパスなどを記載してください。
+    validations:
+      required: true
+  - type: dropdown
+    id: change_type
+    attributes:
+      label: 種類
+      options:
+        - 情報の修正
+        - 施設の追加
+        - 経路・所要時間の情報
+        - その他
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: 内容
+      description: 現在の情報と、変更後の情報を具体的に記載してください。
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 根拠となる公開情報
+      description: 公式ページなどのURLがあれば記載してください。
+  - type: input
+    id: checked_at
+    attributes:
+      label: 確認日
+      placeholder: "2026-06-04"
+    validations:
+      required: true

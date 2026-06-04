@@ -1,0 +1,34 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { categories } from "../../data/categories";
+import { facilities } from "../../data/facilities";
+import { withBasePath } from "../../lib/urls";
+
+export function getStaticPaths() {
+  return categories.map((category) => ({
+    params: { slug: category.id },
+    props: { category }
+  }));
+}
+
+const { category } = Astro.props;
+const matchingFacilities = facilities.filter((facility) => facility.category === category.id);
+const description = `${category.label} | 神大Map`;
+---
+<BaseLayout title={`${category.label} | 神大Map`} description={description} canonicalPath={`/categories/${category.id}/`}>
+  <main class="article-page">
+    <a class="article-back" href={withBasePath(`/?category=${category.id}`)}>地図で見る</a>
+    <section class="article-hero">
+      <p class="eyebrow">Category</p>
+      <h1>{category.label}</h1>
+    </section>
+    <section class="facility-list-page">
+      {matchingFacilities.map((facility) => (
+        <a class="facility-link-card" href={withBasePath(`/facilities/${facility.id}/`)}>
+          <span>{facility.campus}</span>
+          <strong>{facility.name}</strong>
+        </a>
+      ))}
+    </section>
+  </main>
+</BaseLayout>

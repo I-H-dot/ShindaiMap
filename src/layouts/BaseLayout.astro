@@ -1,0 +1,49 @@
+---
+import "../styles/global.css";
+import { withBasePath } from "../lib/urls";
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalPath = Astro.url.pathname
+} = Astro.props;
+
+const site = Astro.site?.toString().replace(/\/$/, "") || "http://localhost:4321";
+const canonicalUrl = `${site}${withBasePath(canonicalPath)}`;
+---
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f7f3ea" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="preconnect" href="https://maps.googleapis.com" />
+    <link rel="preconnect" href="https://maps.gstatic.com" />
+    <title>{title}</title>
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="神大Map" />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: "神大Map",
+      applicationCategory: "NavigationApplication",
+      operatingSystem: "Web",
+      description,
+      url: canonicalUrl
+    })} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
