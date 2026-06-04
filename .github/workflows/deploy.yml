@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install, build, and upload site
-        uses: withastro/action@v5
+        uses: withastro/action@v6
         env:
           PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.ENABLE_GOOGLE_MAPS == 'true' && secrets.PUBLIC_GOOGLE_MAPS_API_KEY || '' }}
 
@@ -43,4 +43,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

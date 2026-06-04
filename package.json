@@ -22,10 +22,10 @@
     "check": "npm run test && npm run build"
   },
   "dependencies": {
-    "@astrojs/react": "^4.4.2",
+    "@astrojs/react": "^5.0.7",
     "@astrojs/sitemap": "^3.6.0",
     "@googlemaps/js-api-loader": "^1.16.10",
-    "astro": "^6.4.2",
+    "astro": "^6.4.4",
     "fuse.js": "^7.1.0",
     "lucide-react": "^0.555.0",
     "react": "^19.2.7",

@@ -9,7 +9,6 @@ import {
   ChevronUp,
   CircleHelp,
   Clock,
-  ExternalLink,
   Layers,
   Library,
   LocateFixed,
@@ -529,7 +528,7 @@ export default function ShindaiMapApp({
     if (!selectedFacility) return;
 
     const url = new URL(
-      withBasePath(`/facilities/${selectedFacility.id}/`),
+      withBasePath(`/?facility=${selectedFacility.id}`),
       window.location.origin
     );
     const title = `${selectedFacility.name} | 神大Map`;
@@ -680,13 +679,6 @@ export default function ShindaiMapApp({
                 <Share2 size={17} />
                 共有
               </button>
-              <a
-                className="link-button"
-                href={withBasePath(`/facilities/${selectedFacility.id}/`)}
-              >
-                <ExternalLink size={17} />
-                詳細
-              </a>
             </div>
             {shareMessage && <p className="share-result">{shareMessage}</p>}
             <div className="mobile-route-list" aria-label="ここからのルート">
@@ -769,14 +761,6 @@ export default function ShindaiMapApp({
             <MapPin size={23} />
             地図
           </a>
-          <a
-            href={withBasePath(
-              `/facilities/${selectedFacility?.id || facilities[0]?.id || ""}/`
-            )}
-          >
-            <ExternalLink size={23} />
-            詳細
-          </a>
           <a href={feedbackUrl} target="_blank" rel="noreferrer">
             <MessageSquare size={23} />
             修正
@@ -804,7 +788,7 @@ export default function ShindaiMapApp({
             <div className="fallback-campus-label">
               <strong>{campus === "all" ? "全キャンパス" : campusCenters[campus].label}</strong>
               <span>
-                Google Maps APIキー未設定でも、検索・フィルタ・施設詳細・外部地図リンクは確認できます。
+                Google Maps APIキー未設定でも、検索・フィルタ・施設情報・外部地図リンクは確認できます。
               </span>
             </div>
             {mapBoundsFacilities.map((facility) => {
@@ -837,25 +821,6 @@ export default function ShindaiMapApp({
           </div>
         )}
 
-        {selectedFacility && (
-          <div className="map-floating-panel">
-            <div className="selected-meta">
-              <span className="pill">{selectedFacility.campus}</span>
-              <span className="pill">{selectedCategory?.label}</span>
-              {selectedFacility.officialMapNumber && (
-                <span className="pill">公式No.{selectedFacility.officialMapNumber}</span>
-              )}
-              <span className="pill">
-                中心から{formatDistance(campusDistance)} / {formatWalkingTime(campusDistance)}
-              </span>
-            </div>
-            <h2>{selectedFacility.name}</h2>
-            <button className="action-button primary" type="button" onClick={routeFromCurrentLocation}>
-              <ChevronUp size={17} />
-              現在地から案内
-            </button>
-          </div>
-        )}
       </section>
     </main>
   );
