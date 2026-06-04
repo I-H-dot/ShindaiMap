@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install, build, and upload site
-        uses: withastro/action@v5
+        uses: withastro/action@v6
         env:
           PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.ENABLE_GOOGLE_MAPS == 'true' && secrets.PUBLIC_GOOGLE_MAPS_API_KEY || '' }}
 
