@@ -378,6 +378,8 @@ export default function ShindaiMapApp({
   const previousBoundsKeyRef = useRef("");
 
   useEffect(() => {
+    if (!googleMapReady) return;
+
     const map = googleMapRef.current;
     if (!map || typeof google === "undefined") return;
 
@@ -434,7 +436,7 @@ export default function ShindaiMapApp({
     } else if (mapBoundsFacilities.length > 1) {
       map.fitBounds(bounds, 58);
     }
-  }, [mapBoundsFacilities, mapFacilities, selectedFacility?.id]);
+  }, [googleMapReady, mapBoundsFacilities, mapFacilities, selectedFacility?.id]);
 
   useEffect(() => {
     if (typeof google === "undefined") return;
