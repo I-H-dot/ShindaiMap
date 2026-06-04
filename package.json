@@ -28,14 +28,14 @@
     "astro": "^6.4.4",
     "fuse.js": "^7.1.0",
     "lucide-react": "^0.555.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@types/google.maps": "^3.58.1",
-    "@types/react": "^18.3.29",
-    "@types/react-dom": "^18.3.7",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
   },
