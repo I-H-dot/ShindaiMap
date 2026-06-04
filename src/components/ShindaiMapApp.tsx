@@ -322,13 +322,16 @@ export default function ShindaiMapApp({
 
     let alive = true;
     import("@googlemaps/js-api-loader")
-      .then(({ Loader }) => {
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-          libraries: ["places"]
+      .then(({ importLibrary, setOptions }) => {
+        setOptions({
+          key: apiKey,
+          v: "weekly"
         });
-        return loader.load();
+        return Promise.all([
+          importLibrary("maps"),
+          importLibrary("marker"),
+          importLibrary("routes")
+        ]);
       })
       .then(() => {
         if (!alive || !mapElementRef.current) return;
