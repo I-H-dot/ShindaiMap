@@ -2,16 +2,16 @@ import Fuse from "fuse.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
+  faBars,
   faBook,
   faBookOpen,
   faBuilding,
   faBus,
   faCircleQuestion,
-  faClock,
-  faCommentDots,
   faCouch,
   faCrosshairs,
   faEnvelope,
+  faFilter,
   faLayerGroup,
   faLocationArrow,
   faMagnifyingGlass,
@@ -145,6 +145,8 @@ export default function ShindaiMapApp({
   const [mapMessage, setMapMessage] = useState("Google Maps APIキーを確認中");
   const [googleMapReady, setGoogleMapReady] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -200,12 +202,8 @@ export default function ShindaiMapApp({
     facilities[0];
 
   const mapFacilities = useMemo(() => {
-    const scopedFacilities =
-      campus === "all"
-        ? facilities
-        : facilities.filter((facility) => facility.campus === campus);
-    return scopedFacilities.length > 0 ? scopedFacilities : facilities;
-  }, [campus, facilities]);
+    return filteredFacilities;
+  }, [filteredFacilities]);
 
   const mapBoundsFacilities = useMemo(() => {
     const localFacilities = mapFacilities.filter(isCampusViewportFacility);
@@ -246,6 +244,7 @@ export default function ShindaiMapApp({
   const selectFacility = (facility: Facility, options?: { zoomMap?: boolean }) => {
     setSelectedId(facility.id);
     setRouteInfo(null);
+    setMobileMenuOpen(false);
     if (options?.zoomMap) {
       focusMapOnFacility(facility);
     }
@@ -563,7 +562,12 @@ export default function ShindaiMapApp({
 
   return (
     <main className="map-shell">
-      <aside className="sidebar" aria-label="神大Map コントロール">
+      <aside
+        className={`sidebar ${mobileMenuOpen ? "is-mobile-menu-open" : ""} ${
+          query.trim() ? "has-query" : ""
+        }`}
+        aria-label="神大Map コントロール"
+      >
         <div className="brand-row">
           <div className="brand-mark">
             <div className="brand-icon" aria-hidden="true">
@@ -574,9 +578,23 @@ export default function ShindaiMapApp({
               <p className="brand-subtitle">教室・トイレ・ラーコモを1画面で探す</p>
             </div>
           </div>
+          <button
+            className="mobile-menu-button"
+            type="button"
+            aria-label="検索メニュー"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
         </div>
 
-        <section className="search-card" aria-label="検索とキャンパス選択">
+        <section
+          className={`search-card ${mobileMenuOpen ? "is-mobile-open" : ""} ${
+            filtersOpen ? "filters-open" : ""
+          }`}
+          aria-label="検索とキャンパス選択"
+        >
           <div className="search-box">
             <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
             <input
@@ -586,6 +604,15 @@ export default function ShindaiMapApp({
               aria-label="施設や教室を検索"
             />
           </div>
+          <button
+            className="mobile-filter-toggle"
+            type="button"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <FontAwesomeIcon icon={faFilter} />
+            フィルター
+          </button>
           <div className="control-grid">
             <label className="field-label">
               キャンパス
@@ -734,20 +761,6 @@ export default function ShindaiMapApp({
           </div>
         </section>
 
-        <nav className="mobile-tab-bar" aria-label="モバイルナビゲーション">
-          <a className="is-active" href={withBasePath("/")}>
-            <FontAwesomeIcon icon={faMapPin} />
-            地図
-          </a>
-          <a href={feedbackUrl} target="_blank" rel="noreferrer">
-            <FontAwesomeIcon icon={faCommentDots} />
-            修正
-          </a>
-          <a href="#search-results">
-            <FontAwesomeIcon icon={faClock} />
-            履歴
-          </a>
-        </nav>
       </aside>
 
       <section className="map-stage" aria-label="地図">
