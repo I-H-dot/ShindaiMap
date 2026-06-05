@@ -2,17 +2,16 @@ import Fuse from "fuse.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
+  faBars,
   faBook,
   faBookOpen,
   faBuilding,
   faBus,
-  faChevronUp,
   faCircleQuestion,
-  faClock,
-  faCommentDots,
   faCouch,
   faCrosshairs,
   faEnvelope,
+  faFilter,
   faLayerGroup,
   faLocationArrow,
   faMagnifyingGlass,
@@ -67,12 +66,6 @@ const getCategory = (category: FacilityCategory) => categoryMap.get(category);
 
 const categoryColor = (facility: Facility) =>
   getCategory(facility.category)?.color || "#2563eb";
-
-const googleMapsUrl = (facility: Facility) =>
-  `https://www.google.com/maps/search/?api=1&query=${facility.position.lat},${facility.position.lng}`;
-
-const appleMapsUrl = (facility: Facility) =>
-  `https://maps.apple.com/?ll=${facility.position.lat},${facility.position.lng}&q=${encodeURIComponent(facility.name)}`;
 
 const getCampusBounds = (facilities: Facility[]) => {
   const positions = facilities.map((facility) => facility.position);
@@ -152,6 +145,8 @@ export default function ShindaiMapApp({
   const [mapMessage, setMapMessage] = useState("Google Maps APIキーを確認中");
   const [googleMapReady, setGoogleMapReady] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -202,17 +197,13 @@ export default function ShindaiMapApp({
   );
 
   const selectedFacility =
-    facilities.find((facility) => facility.id === selectedId) ||
+    filteredFacilities.find((facility) => facility.id === selectedId) ||
     filteredFacilities[0] ||
-    facilities[0];
+    null;
 
   const mapFacilities = useMemo(() => {
-    const scopedFacilities =
-      campus === "all"
-        ? facilities
-        : facilities.filter((facility) => facility.campus === campus);
-    return scopedFacilities.length > 0 ? scopedFacilities : facilities;
-  }, [campus, facilities]);
+    return filteredFacilities;
+  }, [filteredFacilities]);
 
   const mapBoundsFacilities = useMemo(() => {
     const localFacilities = mapFacilities.filter(isCampusViewportFacility);
@@ -253,6 +244,7 @@ export default function ShindaiMapApp({
   const selectFacility = (facility: Facility, options?: { zoomMap?: boolean }) => {
     setSelectedId(facility.id);
     setRouteInfo(null);
+    setMobileMenuOpen(false);
     if (options?.zoomMap) {
       focusMapOnFacility(facility);
     }
@@ -490,6 +482,8 @@ export default function ShindaiMapApp({
           lng: position.coords.longitude
         };
 
+        focusMapOnFacility(selectedFacility, 18);
+
         if (
           googleMapRef.current &&
           typeof google !== "undefined" &&
@@ -568,7 +562,12 @@ export default function ShindaiMapApp({
 
   return (
     <main className="map-shell">
-      <aside className="sidebar" aria-label="神大Map コントロール">
+      <aside
+        className={`sidebar ${mobileMenuOpen ? "is-mobile-menu-open" : ""} ${
+          query.trim() ? "has-query" : ""
+        }`}
+        aria-label="神大Map コントロール"
+      >
         <div className="brand-row">
           <div className="brand-mark">
             <div className="brand-icon" aria-hidden="true">
@@ -579,9 +578,23 @@ export default function ShindaiMapApp({
               <p className="brand-subtitle">教室・トイレ・ラーコモを1画面で探す</p>
             </div>
           </div>
+          <button
+            className="mobile-menu-button"
+            type="button"
+            aria-label="検索メニュー"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
         </div>
 
-        <section className="search-card" aria-label="検索とキャンパス選択">
+        <section
+          className={`search-card ${mobileMenuOpen ? "is-mobile-open" : ""} ${
+            filtersOpen ? "filters-open" : ""
+          }`}
+          aria-label="検索とキャンパス選択"
+        >
           <div className="search-box">
             <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
             <input
@@ -591,6 +604,15 @@ export default function ShindaiMapApp({
               aria-label="施設や教室を検索"
             />
           </div>
+          <button
+            className="mobile-filter-toggle"
+            type="button"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <FontAwesomeIcon icon={faFilter} />
+            フィルター
+          </button>
           <div className="control-grid">
             <label className="field-label">
               キャンパス
@@ -661,39 +683,33 @@ export default function ShindaiMapApp({
                 type="button"
                 onClick={routeFromCurrentLocation}
               >
-                <FontAwesomeIcon icon={faCrosshairs} />
-                現在地から
-              </button>
-              <a
-                className="link-button"
-                href={googleMapsUrl(selectedFacility)}
-                target="_blank"
-                rel="noreferrer"
-              >
                 <FontAwesomeIcon icon={faLocationArrow} />
                 ここへ行く
-              </a>
+              </button>
               <button className="link-button" type="button" onClick={shareSelectedFacility}>
                 <FontAwesomeIcon icon={faShareNodes} />
                 共有
               </button>
             </div>
             {shareMessage && <p className="share-result">{shareMessage}</p>}
-            <div className="mobile-route-list" aria-label="ここからのルート">
-              <h3>ここからのルート</h3>
-              <a
-                href={appleMapsUrl(selectedFacility)}
-                target="_blank"
-                rel="noreferrer"
-                className="mobile-route-option"
-              >
+            {routeInfo && (
+              <div className="route-panel">
                 <FontAwesomeIcon icon={faRoute} />
                 <span>
-                  キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
-                  <small>{formatDistance(campusDistance)}</small>
+                  {routeInfo.durationText} / {routeInfo.distanceText}
+                  {routeInfo.mode === "estimate" ? "（概算）" : ""}
                 </span>
-                <FontAwesomeIcon icon={faChevronUp} />
-              </a>
+              </div>
+            )}
+            <div className="guide-box route-guide">
+              <h3>案内</h3>
+              <ul>
+                <li>
+                  キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
+                  （{formatDistance(campusDistance)}）
+                </li>
+                {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
+              </ul>
             </div>
           </section>
         )}
@@ -743,31 +759,8 @@ export default function ShindaiMapApp({
             <FontAwesomeIcon icon={faLayerGroup} />
             <span>{mapMessage}</span>
           </div>
-          {routeInfo && (
-            <div className="route-panel">
-              <FontAwesomeIcon icon={faRoute} />
-              <span>
-                {routeInfo.durationText} / {routeInfo.distanceText}
-                {routeInfo.mode === "estimate" ? "（概算）" : ""}
-              </span>
-            </div>
-          )}
         </section>
 
-        <nav className="mobile-tab-bar" aria-label="モバイルナビゲーション">
-          <a className="is-active" href={withBasePath("/")}>
-            <FontAwesomeIcon icon={faMapPin} />
-            地図
-          </a>
-          <a href={feedbackUrl} target="_blank" rel="noreferrer">
-            <FontAwesomeIcon icon={faCommentDots} />
-            修正
-          </a>
-          <a href="#search-results">
-            <FontAwesomeIcon icon={faClock} />
-            履歴
-          </a>
-        </nav>
       </aside>
 
       <section className="map-stage" aria-label="地図">
