@@ -6,7 +6,6 @@ import {
   faBookOpen,
   faBuilding,
   faBus,
-  faChevronUp,
   faCircleQuestion,
   faClock,
   faCommentDots,
@@ -67,12 +66,6 @@ const getCategory = (category: FacilityCategory) => categoryMap.get(category);
 
 const categoryColor = (facility: Facility) =>
   getCategory(facility.category)?.color || "#2563eb";
-
-const googleMapsUrl = (facility: Facility) =>
-  `https://www.google.com/maps/search/?api=1&query=${facility.position.lat},${facility.position.lng}`;
-
-const appleMapsUrl = (facility: Facility) =>
-  `https://maps.apple.com/?ll=${facility.position.lat},${facility.position.lng}&q=${encodeURIComponent(facility.name)}`;
 
 const getCampusBounds = (facilities: Facility[]) => {
   const positions = facilities.map((facility) => facility.position);
@@ -490,6 +483,8 @@ export default function ShindaiMapApp({
           lng: position.coords.longitude
         };
 
+        focusMapOnFacility(selectedFacility, 18);
+
         if (
           googleMapRef.current &&
           typeof google !== "undefined" &&
@@ -661,39 +656,33 @@ export default function ShindaiMapApp({
                 type="button"
                 onClick={routeFromCurrentLocation}
               >
-                <FontAwesomeIcon icon={faCrosshairs} />
-                現在地から
-              </button>
-              <a
-                className="link-button"
-                href={googleMapsUrl(selectedFacility)}
-                target="_blank"
-                rel="noreferrer"
-              >
                 <FontAwesomeIcon icon={faLocationArrow} />
                 ここへ行く
-              </a>
+              </button>
               <button className="link-button" type="button" onClick={shareSelectedFacility}>
                 <FontAwesomeIcon icon={faShareNodes} />
                 共有
               </button>
             </div>
             {shareMessage && <p className="share-result">{shareMessage}</p>}
-            <div className="mobile-route-list" aria-label="ここからのルート">
-              <h3>ここからのルート</h3>
-              <a
-                href={appleMapsUrl(selectedFacility)}
-                target="_blank"
-                rel="noreferrer"
-                className="mobile-route-option"
-              >
+            {routeInfo && (
+              <div className="route-panel">
                 <FontAwesomeIcon icon={faRoute} />
                 <span>
-                  キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
-                  <small>{formatDistance(campusDistance)}</small>
+                  {routeInfo.durationText} / {routeInfo.distanceText}
+                  {routeInfo.mode === "estimate" ? "（概算）" : ""}
                 </span>
-                <FontAwesomeIcon icon={faChevronUp} />
-              </a>
+              </div>
+            )}
+            <div className="guide-box route-guide">
+              <h3>案内</h3>
+              <ul>
+                <li>
+                  キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
+                  （{formatDistance(campusDistance)}）
+                </li>
+                {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
+              </ul>
             </div>
           </section>
         )}
@@ -743,15 +732,6 @@ export default function ShindaiMapApp({
             <FontAwesomeIcon icon={faLayerGroup} />
             <span>{mapMessage}</span>
           </div>
-          {routeInfo && (
-            <div className="route-panel">
-              <FontAwesomeIcon icon={faRoute} />
-              <span>
-                {routeInfo.durationText} / {routeInfo.distanceText}
-                {routeInfo.mode === "estimate" ? "（概算）" : ""}
-              </span>
-            </div>
-          )}
         </section>
 
         <nav className="mobile-tab-bar" aria-label="モバイルナビゲーション">
