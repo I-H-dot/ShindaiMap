@@ -1,28 +1,30 @@
 import Fuse from "fuse.js";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  Accessibility,
-  Armchair,
-  BadgeJapaneseYen,
-  BookOpen,
-  Building2,
-  Bus,
-  ChevronUp,
-  CircleHelp,
-  Clock,
-  Layers,
-  Library,
-  LocateFixed,
-  Mailbox,
-  Menu,
-  MapPin,
-  MessageSquare,
-  Navigation,
-  Route,
-  Search,
-  Send,
-  Share2,
-  Utensils
-} from "lucide-react";
+  faBars,
+  faBook,
+  faBookOpen,
+  faBuilding,
+  faBus,
+  faChevronUp,
+  faCircleQuestion,
+  faClock,
+  faCommentDots,
+  faCouch,
+  faCrosshairs,
+  faEnvelope,
+  faLayerGroup,
+  faLocationArrow,
+  faMagnifyingGlass,
+  faMapPin,
+  faPaperPlane,
+  faRoute,
+  faShareNodes,
+  faUniversalAccess,
+  faUtensils,
+  faYenSign
+} from "@fortawesome/free-solid-svg-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { categoryMap } from "../data/categories";
 import { formatDistance, formatWalkingTime, metersBetween } from "../lib/distance";
@@ -47,19 +49,19 @@ interface RouteInfo {
   mode: "google" | "estimate";
 }
 
-const icons = {
-  accessibility: Accessibility,
-  armchair: Armchair,
-  "book-open": BookOpen,
-  library: Library,
-  "building-2": Building2,
-  route: Route,
-  "badge-yen": BadgeJapaneseYen,
-  mailbox: Mailbox,
-  bus: Bus,
-  utensils: Utensils,
-  "circle-help": CircleHelp,
-  "map-pin": MapPin
+const icons: Record<string, IconDefinition> = {
+  accessibility: faUniversalAccess,
+  armchair: faCouch,
+  "book-open": faBookOpen,
+  library: faBook,
+  "building-2": faBuilding,
+  route: faRoute,
+  "badge-yen": faYenSign,
+  mailbox: faEnvelope,
+  bus: faBus,
+  utensils: faUtensils,
+  "circle-help": faCircleQuestion,
+  "map-pin": faMapPin
 };
 
 const getCategory = (category: FacilityCategory) => categoryMap.get(category);
@@ -571,7 +573,7 @@ export default function ShindaiMapApp({
         <div className="brand-row">
           <div className="brand-mark">
             <div className="brand-icon" aria-hidden="true">
-              <MapPin size={24} />
+              <FontAwesomeIcon icon={faMapPin} />
             </div>
             <div>
               <h1 className="brand-title">神大Map</h1>
@@ -579,16 +581,16 @@ export default function ShindaiMapApp({
             </div>
           </div>
           <a className="about-link" href={withBasePath("/about/")} aria-label="神大Mapについて">
-            <CircleHelp size={17} />
+            <FontAwesomeIcon icon={faCircleQuestion} />
           </a>
           <a className="mobile-menu-button" href={withBasePath("/about/")} aria-label="メニュー">
-            <Menu size={25} />
+            <FontAwesomeIcon icon={faBars} />
           </a>
         </div>
 
         <section className="search-card" aria-label="検索とキャンパス選択">
           <div className="search-box">
-            <Search aria-hidden="true" />
+            <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -646,7 +648,7 @@ export default function ShindaiMapApp({
           >
             <div className="selected-heading">
               <div className="selected-pin" aria-hidden="true">
-                <MapPin size={20} />
+                <FontAwesomeIcon icon={faMapPin} />
               </div>
               <div>
                 <h2>{selectedFacility.name}</h2>
@@ -666,7 +668,7 @@ export default function ShindaiMapApp({
                 type="button"
                 onClick={routeFromCurrentLocation}
               >
-                <LocateFixed size={17} />
+                <FontAwesomeIcon icon={faCrosshairs} />
                 現在地から
               </button>
               <a
@@ -675,11 +677,11 @@ export default function ShindaiMapApp({
                 target="_blank"
                 rel="noreferrer"
               >
-                <Navigation size={17} />
+                <FontAwesomeIcon icon={faLocationArrow} />
                 ここへ行く
               </a>
               <button className="link-button" type="button" onClick={shareSelectedFacility}>
-                <Share2 size={17} />
+                <FontAwesomeIcon icon={faShareNodes} />
                 共有
               </button>
             </div>
@@ -692,12 +694,12 @@ export default function ShindaiMapApp({
                 rel="noreferrer"
                 className="mobile-route-option"
               >
-                <Route size={19} />
+                <FontAwesomeIcon icon={faRoute} />
                 <span>
                   キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
                   <small>{formatDistance(campusDistance)}</small>
                 </span>
-                <ChevronUp size={18} />
+                <FontAwesomeIcon icon={faChevronUp} />
               </a>
             </div>
           </section>
@@ -732,25 +734,25 @@ export default function ShindaiMapApp({
         <section id="feedback" className="feedback-card" aria-label="修正提案">
           <div className="section-title-row">
             <h2>
-              <Send size={17} />
+              <FontAwesomeIcon icon={faPaperPlane} />
               情報の追加・修正
             </h2>
           </div>
           <p>施設情報の誤りや追加候補は、GitHub Issueで根拠と確認日を添えて知らせてください。</p>
           <a className="action-button" href={feedbackUrl} target="_blank" rel="noreferrer">
-            <Send size={17} />
+            <FontAwesomeIcon icon={faPaperPlane} />
             GitHub Issueを作成
           </a>
         </section>
 
         <section className="status-card" aria-label="接続状態">
           <div className="status-line">
-            <Layers size={17} />
+            <FontAwesomeIcon icon={faLayerGroup} />
             <span>{mapMessage}</span>
           </div>
           {routeInfo && (
             <div className="route-panel">
-              <Route size={18} />
+              <FontAwesomeIcon icon={faRoute} />
               <span>
                 {routeInfo.durationText} / {routeInfo.distanceText}
                 {routeInfo.mode === "estimate" ? "（概算）" : ""}
@@ -761,15 +763,15 @@ export default function ShindaiMapApp({
 
         <nav className="mobile-tab-bar" aria-label="モバイルナビゲーション">
           <a className="is-active" href={withBasePath("/")}>
-            <MapPin size={23} />
+            <FontAwesomeIcon icon={faMapPin} />
             地図
           </a>
           <a href={feedbackUrl} target="_blank" rel="noreferrer">
-            <MessageSquare size={23} />
+            <FontAwesomeIcon icon={faCommentDots} />
             修正
           </a>
           <a href="#search-results">
-            <Clock size={23} />
+            <FontAwesomeIcon icon={faClock} />
             履歴
           </a>
         </nav>
@@ -784,7 +786,7 @@ export default function ShindaiMapApp({
           aria-label="現在地を見る"
           title="現在地を見る"
         >
-          <LocateFixed size={21} />
+          <FontAwesomeIcon icon={faCrosshairs} />
         </button>
         {!googleMapReady && (
           <div className="fallback-map">
@@ -795,7 +797,7 @@ export default function ShindaiMapApp({
               </span>
             </div>
             {mapBoundsFacilities.map((facility) => {
-              const Icon = icons[getCategory(facility.category)?.icon as keyof typeof icons] || MapPin;
+              const icon = icons[getCategory(facility.category)?.icon || "map-pin"] || faMapPin;
               return (
                 <button
                   key={facility.id}
@@ -816,7 +818,7 @@ export default function ShindaiMapApp({
                   {facility.officialMapNumber ? (
                     <span className="pin-number">{facility.officialMapNumber}</span>
                   ) : (
-                    <Icon size={17} />
+                    <FontAwesomeIcon icon={icon} />
                   )}
                 </button>
               );
