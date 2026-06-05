@@ -197,9 +197,9 @@ export default function ShindaiMapApp({
   );
 
   const selectedFacility =
-    facilities.find((facility) => facility.id === selectedId) ||
+    filteredFacilities.find((facility) => facility.id === selectedId) ||
     filteredFacilities[0] ||
-    facilities[0];
+    null;
 
   const mapFacilities = useMemo(() => {
     return filteredFacilities;

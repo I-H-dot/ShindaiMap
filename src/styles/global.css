@@ -101,6 +101,11 @@ a {
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.3);
 }
 
+.brand-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
 .brand-title {
   margin: 0;
   font-size: 1.25rem;
@@ -311,6 +316,11 @@ a {
   color: #fff;
 }
 
+.selected-pin svg {
+  width: 20px;
+  height: 20px;
+}
+
 .selected-card h2 {
   margin: 0;
   font-size: 1.05rem;
@@ -349,6 +359,14 @@ a {
   color: var(--ink);
   text-decoration: none;
   cursor: pointer;
+}
+
+.action-button svg,
+.link-button svg,
+.section-title-row svg,
+.status-line svg {
+  width: 17px;
+  height: 17px;
 }
 
 .action-button.primary {
@@ -501,6 +519,11 @@ a {
   z-index: 3;
 }
 
+.fallback-pin svg {
+  width: 17px;
+  height: 17px;
+}
+
 .map-locate-button {
   position: absolute;
   bottom: 20px;
@@ -517,6 +540,11 @@ a {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
   cursor: pointer;
   backdrop-filter: blur(10px);
+}
+
+.map-locate-button svg {
+  width: 21px;
+  height: 21px;
 }
 
 .map-locate-button:hover {
@@ -547,6 +575,11 @@ a {
   padding: 10px;
   background: rgba(37, 99, 235, 0.08);
   color: #1d4ed8;
+}
+
+.route-panel svg {
+  width: 18px;
+  height: 18px;
 }
 
 .share-result {
@@ -1021,6 +1054,10 @@ a {
     max-height: 28svh;
     overflow: auto;
     padding-bottom: 4px;
+  }
+
+  .route-guide {
+    display: block;
   }
 
   .sidebar.is-mobile-menu-open.has-query .result-list {
