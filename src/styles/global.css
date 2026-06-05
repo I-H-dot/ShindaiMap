@@ -114,7 +114,6 @@ a {
   font-size: 0.82rem;
 }
 
-.about-link,
 .article-back {
   display: inline-flex;
   align-items: center;
@@ -128,7 +127,6 @@ a {
   text-decoration: none;
 }
 
-.mobile-menu-button,
 .mobile-route-list,
 .mobile-tab-bar {
   display: none;
@@ -735,27 +733,6 @@ a {
     background: #fff;
     color: #073b86;
     box-shadow: inset 0 0 0 2px rgba(7, 59, 134, 0.18);
-  }
-
-  .about-link {
-    display: none;
-  }
-
-  .mobile-menu-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 42px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: #fff;
-    color: #073b86;
-    text-decoration: none;
-    font-weight: 800;
-  }
-
-  .mobile-menu-button {
-    width: 40px;
   }
 
   .search-card {

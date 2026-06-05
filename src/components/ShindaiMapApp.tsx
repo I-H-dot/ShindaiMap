@@ -2,7 +2,6 @@ import Fuse from "fuse.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faBars,
   faBook,
   faBookOpen,
   faBuilding,
@@ -580,12 +579,6 @@ export default function ShindaiMapApp({
               <p className="brand-subtitle">教室・トイレ・ラーコモを1画面で探す</p>
             </div>
           </div>
-          <a className="about-link" href={withBasePath("/about/")} aria-label="神大Mapについて">
-            <FontAwesomeIcon icon={faCircleQuestion} />
-          </a>
-          <a className="mobile-menu-button" href={withBasePath("/about/")} aria-label="メニュー">
-            <FontAwesomeIcon icon={faBars} />
-          </a>
         </div>
 
         <section className="search-card" aria-label="検索とキャンパス選択">
