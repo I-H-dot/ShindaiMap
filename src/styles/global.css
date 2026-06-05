@@ -101,6 +101,11 @@ a {
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.3);
 }
 
+.brand-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
 .brand-title {
   margin: 0;
   font-size: 1.25rem;
@@ -114,7 +119,6 @@ a {
   font-size: 0.82rem;
 }
 
-.about-link,
 .article-back {
   display: inline-flex;
   align-items: center;
@@ -129,8 +133,7 @@ a {
 }
 
 .mobile-menu-button,
-.mobile-route-list,
-.mobile-tab-bar {
+.mobile-filter-toggle {
   display: none;
 }
 
@@ -177,6 +180,21 @@ a {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 10px;
+}
+
+.mobile-filter-toggle {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent);
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .field-label {
@@ -298,6 +316,11 @@ a {
   color: #fff;
 }
 
+.selected-pin svg {
+  width: 20px;
+  height: 20px;
+}
+
 .selected-card h2 {
   margin: 0;
   font-size: 1.05rem;
@@ -318,7 +341,7 @@ a {
 
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -338,6 +361,14 @@ a {
   cursor: pointer;
 }
 
+.action-button svg,
+.link-button svg,
+.section-title-row svg,
+.status-line svg {
+  width: 17px;
+  height: 17px;
+}
+
 .action-button.primary {
   border-color: var(--accent);
   background: var(--accent);
@@ -353,6 +384,10 @@ a {
   border-radius: 8px;
   padding: 10px;
   background: #f8fafc;
+}
+
+.route-guide {
+  margin-top: 10px;
 }
 
 .guide-box h3 {
@@ -484,6 +519,11 @@ a {
   z-index: 3;
 }
 
+.fallback-pin svg {
+  width: 17px;
+  height: 17px;
+}
+
 .map-locate-button {
   position: absolute;
   bottom: 20px;
@@ -500,6 +540,11 @@ a {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
   cursor: pointer;
   backdrop-filter: blur(10px);
+}
+
+.map-locate-button svg {
+  width: 21px;
+  height: 21px;
 }
 
 .map-locate-button:hover {
@@ -524,11 +569,17 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 10px;
   border: 1px solid rgba(37, 99, 235, 0.24);
   border-radius: 8px;
   padding: 10px;
   background: rgba(37, 99, 235, 0.08);
   color: #1d4ed8;
+}
+
+.route-panel svg {
+  width: 18px;
+  height: 18px;
 }
 
 .share-result {
@@ -676,8 +727,8 @@ a {
 
   .map-shell {
     grid-template-rows: auto minmax(0, 1fr);
-    width: min(390px, 100%);
-    max-width: 390px;
+    width: 100%;
+    max-width: 100%;
     height: 100svh;
     min-height: 0;
     margin: 0;
@@ -696,7 +747,7 @@ a {
     z-index: 20;
     grid-row: 1;
     width: 100%;
-    max-width: 390px;
+    max-width: 100%;
     min-width: 0;
     gap: 12px;
     overflow: hidden;
@@ -709,7 +760,7 @@ a {
 
   .brand-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     width: 100%;
     max-width: 100%;
@@ -737,14 +788,11 @@ a {
     box-shadow: inset 0 0 0 2px rgba(7, 59, 134, 0.18);
   }
 
-  .about-link {
-    display: none;
-  }
-
   .mobile-menu-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 40px;
     min-height: 42px;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -754,11 +802,8 @@ a {
     font-weight: 800;
   }
 
-  .mobile-menu-button {
-    width: 40px;
-  }
-
   .search-card {
+    display: none;
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -766,6 +811,10 @@ a {
     padding: 0;
     background: transparent;
     box-shadow: none;
+  }
+
+  .search-card.is-mobile-open {
+    display: block;
   }
 
   .search-box input {
@@ -787,12 +836,22 @@ a {
   .control-grid {
     width: 100%;
     max-width: 100%;
-    display: flex;
+    display: none;
     align-items: center;
     gap: 8px;
     margin-top: 12px;
     overflow-x: auto;
     scrollbar-width: none;
+  }
+
+  .mobile-filter-toggle {
+    display: inline-flex;
+    min-height: 42px;
+    border-radius: 999px;
+  }
+
+  .search-card.filters-open .control-grid {
+    display: flex;
   }
 
   .control-grid::-webkit-scrollbar {
@@ -879,13 +938,13 @@ a {
     bottom: 0;
     left: 0;
     z-index: 30;
-    width: min(390px, 100%);
-    max-width: 390px;
+    width: 100%;
+    max-width: 100%;
     max-height: min(54svh, 510px);
     overflow: auto hidden;
     border-width: 1px 0 0;
     border-radius: 22px 22px 0 0;
-    padding: 28px 12px 92px;
+    padding: 28px 12px 20px;
     background: #fff;
     box-shadow: 0 -18px 42px rgba(15, 23, 42, 0.18);
     transform: none;
@@ -950,7 +1009,7 @@ a {
   }
 
   .action-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -984,81 +1043,24 @@ a {
     color: #fff;
   }
 
-  .mobile-route-list {
-    display: grid;
-    gap: 8px;
-    margin-top: 16px;
-  }
-
-  .mobile-route-list h3 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  .mobile-route-option {
-    display: grid;
-    grid-template-columns: 28px 1fr 20px;
-    align-items: center;
-    gap: 12px;
-    min-height: 66px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 10px 12px;
-    color: #111827;
-    text-decoration: none;
-    min-width: 0;
-  }
-
-  .mobile-route-option span {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .mobile-route-option small {
-    display: block;
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
-
-  .guide-box,
   .tag-row,
-  .result-list,
   .feedback-card,
   .status-card {
     display: none;
   }
 
-  .mobile-tab-bar {
-    position: fixed;
-    right: auto;
-    bottom: 0;
-    left: 0;
-    z-index: 31;
-    width: min(390px, 100%);
-    max-width: 390px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.1);
-    backdrop-filter: blur(14px);
-    transform: none;
+  .result-list {
+    display: none;
+    max-height: 28svh;
+    overflow: auto;
+    padding-bottom: 4px;
   }
 
-  .mobile-tab-bar a {
-    display: grid;
-    gap: 4px;
-    min-height: 72px;
-    place-items: center;
-    padding: 7px 0 9px;
-    color: #6b7280;
-    font-size: 0.78rem;
-    font-weight: 800;
-    text-decoration: none;
+  .route-guide {
+    display: block;
   }
 
-  .mobile-tab-bar a.is-active {
-    color: #073b86;
+  .sidebar.is-mobile-menu-open.has-query .result-list {
+    display: grid;
   }
 }
