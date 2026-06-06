@@ -24,6 +24,7 @@ html,
 body {
   min-height: 100%;
   margin: 0;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -62,6 +63,7 @@ a {
   height: 100svh;
   min-height: 680px;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .sidebar {
@@ -70,9 +72,11 @@ a {
   flex-direction: column;
   gap: 16px;
   overflow: auto;
+  overscroll-behavior: contain;
   border-right: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.96);
   padding: 18px;
+  -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(18px);
 }
 
@@ -244,6 +248,8 @@ a {
 .result-list {
   display: grid;
   gap: 8px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .result-card {
@@ -297,6 +303,10 @@ a {
 
 .selected-card {
   padding: 14px;
+}
+
+.mobile-sheet-handle {
+  display: none;
 }
 
 .selected-heading {
@@ -940,26 +950,56 @@ a {
     z-index: 30;
     width: 100%;
     max-width: 100%;
-    max-height: min(54svh, 510px);
-    overflow: auto hidden;
+    --mobile-panel-peek-height: 112px;
+    --mobile-panel-offset: 0;
+    max-height: min(78svh, 640px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border-width: 1px 0 0;
     border-radius: 22px 22px 0 0;
-    padding: 28px 12px 20px;
+    padding: 30px 12px calc(20px + env(safe-area-inset-bottom));
     background: #fff;
     box-shadow: 0 -18px 42px rgba(15, 23, 42, 0.18);
-    transform: none;
+    transform: translateY(var(--mobile-panel-offset));
+    transition: transform 180ms ease, max-height 180ms ease;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    will-change: transform;
   }
 
-  .selected-card::before {
+  .selected-card.is-mobile-panel-closed {
+    --mobile-panel-offset: calc(100% - var(--mobile-panel-peek-height));
+  }
+
+  .selected-card.is-mobile-panel-closed .mobile-sheet-content {
+    pointer-events: none;
+  }
+
+  .mobile-sheet-handle {
     position: absolute;
-    top: 10px;
+    top: 6px;
     left: 50%;
+    z-index: 2;
+    display: grid;
+    width: 88px;
+    height: 24px;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    transform: translateX(-50%);
+  }
+
+  .mobile-sheet-handle::before {
+    display: block;
     width: 56px;
     height: 5px;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.28);
+    background: rgba(15, 23, 42, 0.3);
     content: "";
-    transform: translateX(-50%);
   }
 
   .selected-heading {
