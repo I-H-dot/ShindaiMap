@@ -82,6 +82,10 @@ const categoryColor = (facility: Facility) =>
 const isMobileViewport = () =>
   typeof window !== "undefined" && window.matchMedia("(max-width: 620px)").matches;
 
+const INITIAL_MAP_ZOOM = 16;
+const FOCUSED_FACILITY_ZOOM = 18;
+const MAP_FIT_BOUNDS_PADDING = 58;
+
 const getCampusBounds = (facilities: Facility[]) => {
   const positions = facilities.map((facility) => facility.position);
   const lats = positions.map((position) => position.lat);
@@ -164,6 +168,7 @@ export default function ShindaiMapApp({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobilePanelState, setMobilePanelState] =
     useState<MobilePanelState>("expanded");
+  const isMobilePanelClosed = mobilePanelState === "closed";
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const selectedPanelTouchRef = useRef<TouchStartState | null>(null);
@@ -243,7 +248,7 @@ export default function ShindaiMapApp({
     [categories, countsByCategory]
   );
 
-  const focusMapOnFacility = (facility: Facility, zoom = 18) => {
+  const focusMapOnFacility = (facility: Facility, zoom = FOCUSED_FACILITY_ZOOM) => {
     const map = googleMapRef.current;
     if (!map) return;
 
@@ -342,6 +347,7 @@ export default function ShindaiMapApp({
   const handleMobilePanelPointerDown = (event: React.PointerEvent<HTMLElement>) => {
     if (!isMobileViewport() || event.pointerType === "touch") return;
 
+    event.currentTarget.setPointerCapture(event.pointerId);
     selectedPanelPointerRef.current = {
       x: event.clientX,
       y: event.clientY,
@@ -371,14 +377,20 @@ export default function ShindaiMapApp({
   const handleMobilePanelPointerUp = (event: React.PointerEvent<HTMLElement>) => {
     const start = selectedPanelPointerRef.current;
     selectedPanelPointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     if (!isMobileViewport() || event.pointerType === "touch") return;
     if (!start || start.pointerId !== event.pointerId) return;
 
     applyMobilePanelSwipe(start, event.clientX, event.clientY);
   };
 
-  const handleMobilePanelPointerCancel = () => {
+  const handleMobilePanelPointerCancel = (event: React.PointerEvent<HTMLElement>) => {
     selectedPanelPointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
 
   const showCurrentLocationOnMap = () => {
@@ -459,7 +471,7 @@ export default function ShindaiMapApp({
         const center = campusCenters["六甲台第2"];
         const map = new google.maps.Map(mapElementRef.current, {
           center,
-          zoom: 16,
+          zoom: INITIAL_MAP_ZOOM,
           clickableIcons: false,
           fullscreenControl: false,
           mapTypeControl: false,
@@ -501,8 +513,7 @@ export default function ShindaiMapApp({
     const shell = document.querySelector<HTMLElement>(".map-shell");
     if (!shell) return;
 
-    let startX = 0;
-    let startY = 0;
+    let touchStart: Pick<TouchStartState, "x" | "y"> | null = null;
 
     const findScrollContainer = (target: EventTarget | null) => {
       if (!(target instanceof Element)) return null;
@@ -510,12 +521,23 @@ export default function ShindaiMapApp({
     };
 
     const onTouchStart = (event: TouchEvent) => {
+      touchStart = null;
+      if (!isMobileViewport()) return;
       if (event.touches.length !== 1) return;
-      startX = event.touches[0].clientX;
-      startY = event.touches[0].clientY;
+
+      const target = event.target;
+      if (!(target instanceof Node) || !shell.contains(target)) return;
+      if (target instanceof Element && target.closest(".google-map")) return;
+
+      touchStart = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY
+      };
     };
 
     const onTouchMove = (event: TouchEvent) => {
+      if (!isMobileViewport()) return;
+      if (!touchStart) return;
       if (!event.cancelable || event.touches.length !== 1) return;
 
       const target = event.target;
@@ -523,8 +545,8 @@ export default function ShindaiMapApp({
       if (target instanceof Element && target.closest(".google-map")) return;
 
       const touch = event.touches[0];
-      const deltaX = touch.clientX - startX;
-      const deltaY = touch.clientY - startY;
+      const deltaX = touch.clientX - touchStart.x;
+      const deltaY = touch.clientY - touchStart.y;
       if (deltaY <= 0 || Math.abs(deltaY) <= Math.abs(deltaX)) return;
 
       const scrollContainer = findScrollContainer(target);
@@ -548,6 +570,7 @@ export default function ShindaiMapApp({
   }, []);
 
   const previousBoundsKeyRef = useRef("");
+  const hasInitializedDefaultViewportRef = useRef(false);
 
   useEffect(() => {
     if (!googleMapReady) return;
@@ -602,13 +625,39 @@ export default function ShindaiMapApp({
 
     previousBoundsKeyRef.current = boundsKey;
 
+    const isDefaultViewport =
+      campus === "all" &&
+      selectedCategories.size === allCategoryIds.length &&
+      !query.trim();
+
+    if (!hasInitializedDefaultViewportRef.current) {
+      hasInitializedDefaultViewportRef.current = true;
+
+      if (isDefaultViewport) {
+        if (selectedFacility) {
+          map.setCenter(selectedFacility.position);
+        }
+        map.setZoom(INITIAL_MAP_ZOOM);
+        return;
+      }
+    }
+
     if (mapBoundsFacilities.length === 1) {
       map.setCenter(mapBoundsFacilities[0].position);
-      map.setZoom(18);
+      map.setZoom(FOCUSED_FACILITY_ZOOM);
     } else if (mapBoundsFacilities.length > 1) {
-      map.fitBounds(bounds, 58);
+      map.fitBounds(bounds, MAP_FIT_BOUNDS_PADDING);
     }
-  }, [googleMapReady, mapBoundsFacilities, mapFacilities, selectedFacility?.id]);
+  }, [
+    allCategoryIds.length,
+    campus,
+    googleMapReady,
+    mapBoundsFacilities,
+    mapFacilities,
+    query,
+    selectedCategories,
+    selectedFacility
+  ]);
 
   useEffect(() => {
     if (typeof google === "undefined") return;
@@ -659,7 +708,7 @@ export default function ShindaiMapApp({
           lng: position.coords.longitude
         };
 
-        focusMapOnFacility(selectedFacility, 18);
+        focusMapOnFacility(selectedFacility, FOCUSED_FACILITY_ZOOM);
 
         if (
           googleMapRef.current &&
@@ -851,11 +900,9 @@ export default function ShindaiMapApp({
               className="mobile-sheet-handle"
               type="button"
               aria-controls="selected-facility-panel"
-              aria-expanded={mobilePanelState === "expanded"}
+              aria-expanded={!isMobilePanelClosed}
               aria-label={
-                mobilePanelState === "expanded"
-                  ? "施設メニューを閉じる"
-                  : "施設メニューを開く"
+                isMobilePanelClosed ? "施設メニューを開く" : "施設メニューを閉じる"
               }
               onClick={toggleMobilePanel}
             />
@@ -875,39 +922,45 @@ export default function ShindaiMapApp({
                 </div>
               </div>
             </div>
-            <div className="action-grid">
-              <button
-                className="action-button primary"
-                type="button"
-                onClick={routeFromCurrentLocation}
-              >
-                <FontAwesomeIcon icon={faLocationArrow} />
-                ここへ行く
-              </button>
-              <button className="link-button" type="button" onClick={shareSelectedFacility}>
-                <FontAwesomeIcon icon={faShareNodes} />
-                共有
-              </button>
-            </div>
-            {shareMessage && <p className="share-result">{shareMessage}</p>}
-            {routeInfo && (
-              <div className="route-panel">
-                <FontAwesomeIcon icon={faRoute} />
-                <span>
-                  {routeInfo.durationText} / {routeInfo.distanceText}
-                  {routeInfo.mode === "estimate" ? "（概算）" : ""}
-                </span>
+            <div
+              className="mobile-sheet-content"
+              aria-hidden={isMobilePanelClosed}
+              inert={isMobilePanelClosed ? true : undefined}
+            >
+              <div className="action-grid">
+                <button
+                  className="action-button primary"
+                  type="button"
+                  onClick={routeFromCurrentLocation}
+                >
+                  <FontAwesomeIcon icon={faLocationArrow} />
+                  ここへ行く
+                </button>
+                <button className="link-button" type="button" onClick={shareSelectedFacility}>
+                  <FontAwesomeIcon icon={faShareNodes} />
+                  共有
+                </button>
               </div>
-            )}
-            <div className="guide-box route-guide">
-              <h3>案内</h3>
-              <ul>
-                <li>
-                  キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
-                  （{formatDistance(campusDistance)}）
-                </li>
-                {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
-              </ul>
+              {shareMessage && <p className="share-result">{shareMessage}</p>}
+              {routeInfo && (
+                <div className="route-panel">
+                  <FontAwesomeIcon icon={faRoute} />
+                  <span>
+                    {routeInfo.durationText} / {routeInfo.distanceText}
+                    {routeInfo.mode === "estimate" ? "（概算）" : ""}
+                  </span>
+                </div>
+              )}
+              <div className="guide-box route-guide">
+                <h3>案内</h3>
+                <ul>
+                  <li>
+                    キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
+                    （{formatDistance(campusDistance)}）
+                  </li>
+                  {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
+                </ul>
+              </div>
             </div>
           </section>
         )}

@@ -972,7 +972,7 @@ a {
     --mobile-panel-offset: calc(100% - var(--mobile-panel-peek-height));
   }
 
-  .selected-card.is-mobile-panel-closed > :not(.mobile-sheet-handle):not(.selected-heading) {
+  .selected-card.is-mobile-panel-closed .mobile-sheet-content {
     pointer-events: none;
   }
 
