@@ -168,7 +168,8 @@ export default function ShindaiMapApp({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobilePanelState, setMobilePanelState] =
     useState<MobilePanelState>("expanded");
-  const isMobilePanelClosed = mobilePanelState === "closed";
+  const [isMobileViewportActive, setIsMobileViewportActive] = useState(false);
+  const isMobilePanelClosed = isMobileViewportActive && mobilePanelState === "closed";
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const selectedPanelTouchRef = useRef<TouchStartState | null>(null);
@@ -179,6 +180,22 @@ export default function ShindaiMapApp({
   const currentLocationMarkerRef = useRef<google.maps.Marker | null>(null);
 
   useUrlInitialSelection(facilities, setSelectedId, setSelectedCategories);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 620px)");
+    const syncMobileViewport = () => {
+      setIsMobileViewportActive(mediaQuery.matches);
+      if (!mediaQuery.matches) {
+        setMobilePanelState("expanded");
+      }
+    };
+
+    syncMobileViewport();
+    mediaQuery.addEventListener("change", syncMobileViewport);
+    return () => {
+      mediaQuery.removeEventListener("change", syncMobileViewport);
+    };
+  }, []);
 
   const campusNames = useMemo(
     () => Object.keys(campusCenters) as CampusName[],
