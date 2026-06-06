@@ -40,6 +40,25 @@ export interface TransitStopDistance {
   distanceMeters: number;
 }
 
+const TRANSIT_TIME_ZONE = "Asia/Tokyo";
+const transitDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: TRANSIT_TIME_ZONE,
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23"
+});
+
+const getTransitDateParts = (date: Date) => {
+  const parts = Object.fromEntries(
+    transitDateFormatter.formatToParts(date).map((part) => [part.type, part.value])
+  );
+  return {
+    weekday: parts.weekday,
+    minutes: Number(parts.hour) * 60 + Number(parts.minute)
+  };
+};
+
 const toMinutes = (time: string) => {
   const [hour, minute] = time.split(":").map(Number);
   return hour * 60 + minute;
@@ -53,8 +72,8 @@ const formatClock = (minutes: number) => {
 };
 
 export const getTransitServiceDay = (date: Date) => {
-  const day = date.getDay();
-  return day === 0 || day === 6 ? "weekend" : "weekday";
+  const { weekday } = getTransitDateParts(date);
+  return weekday === "Sat" || weekday === "Sun" ? "weekend" : "weekday";
 };
 
 export const getUpcomingDepartures = (
@@ -63,10 +82,9 @@ export const getUpcomingDepartures = (
   count = 2
 ): TransitDeparture[] => {
   const serviceDay = getTransitServiceDay(date);
-  const tomorrowDate = new Date(date);
-  tomorrowDate.setDate(date.getDate() + 1);
+  const tomorrowDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
   const nextDay = getTransitServiceDay(tomorrowDate);
-  const nowMinutes = date.getHours() * 60 + date.getMinutes();
+  const { minutes: nowMinutes } = getTransitDateParts(date);
   const today = stop.schedule[serviceDay].map((time) => toMinutes(time));
   const tomorrow = stop.schedule[nextDay].map((time) => toMinutes(time) + 1440);
 
