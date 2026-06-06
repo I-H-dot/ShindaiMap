@@ -67,6 +67,10 @@ const getCategory = (category: FacilityCategory) => categoryMap.get(category);
 const categoryColor = (facility: Facility) =>
   getCategory(facility.category)?.color || "#2563eb";
 
+const INITIAL_MAP_ZOOM = 16;
+const FOCUSED_FACILITY_ZOOM = 18;
+const MAP_FIT_BOUNDS_PADDING = 58;
+
 const getCampusBounds = (facilities: Facility[]) => {
   const positions = facilities.map((facility) => facility.position);
   const lats = positions.map((position) => position.lat);
@@ -224,7 +228,7 @@ export default function ShindaiMapApp({
     [categories, countsByCategory]
   );
 
-  const focusMapOnFacility = (facility: Facility, zoom = 18) => {
+  const focusMapOnFacility = (facility: Facility, zoom = FOCUSED_FACILITY_ZOOM) => {
     const map = googleMapRef.current;
     if (!map) return;
 
@@ -332,7 +336,7 @@ export default function ShindaiMapApp({
         const center = campusCenters["六甲台第2"];
         const map = new google.maps.Map(mapElementRef.current, {
           center,
-          zoom: 16,
+          zoom: INITIAL_MAP_ZOOM,
           clickableIcons: false,
           fullscreenControl: false,
           mapTypeControl: false,
@@ -371,6 +375,7 @@ export default function ShindaiMapApp({
   }, [campusCenters]);
 
   const previousBoundsKeyRef = useRef("");
+  const hasInitializedDefaultViewportRef = useRef(false);
 
   useEffect(() => {
     if (!googleMapReady) return;
@@ -425,13 +430,39 @@ export default function ShindaiMapApp({
 
     previousBoundsKeyRef.current = boundsKey;
 
+    const isDefaultViewport =
+      campus === "all" &&
+      selectedCategories.size === allCategoryIds.length &&
+      !query.trim();
+
+    if (!hasInitializedDefaultViewportRef.current) {
+      hasInitializedDefaultViewportRef.current = true;
+
+      if (isDefaultViewport) {
+        if (selectedFacility) {
+          map.setCenter(selectedFacility.position);
+        }
+        map.setZoom(INITIAL_MAP_ZOOM);
+        return;
+      }
+    }
+
     if (mapBoundsFacilities.length === 1) {
       map.setCenter(mapBoundsFacilities[0].position);
-      map.setZoom(18);
+      map.setZoom(FOCUSED_FACILITY_ZOOM);
     } else if (mapBoundsFacilities.length > 1) {
-      map.fitBounds(bounds, 58);
+      map.fitBounds(bounds, MAP_FIT_BOUNDS_PADDING);
     }
-  }, [googleMapReady, mapBoundsFacilities, mapFacilities, selectedFacility?.id]);
+  }, [
+    allCategoryIds.length,
+    campus,
+    googleMapReady,
+    mapBoundsFacilities,
+    mapFacilities,
+    query,
+    selectedCategories,
+    selectedFacility
+  ]);
 
   useEffect(() => {
     if (typeof google === "undefined") return;
@@ -482,7 +513,7 @@ export default function ShindaiMapApp({
           lng: position.coords.longitude
         };
 
-        focusMapOnFacility(selectedFacility, 18);
+        focusMapOnFacility(selectedFacility, FOCUSED_FACILITY_ZOOM);
 
         if (
           googleMapRef.current &&
