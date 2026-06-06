@@ -35,6 +35,8 @@ import type {
 } from "../lib/types";
 import { withBasePath } from "../lib/urls";
 
+type MobilePanelState = "expanded" | "closed";
+
 interface Props {
   initialFacilities: Facility[];
   categories: CategoryDefinition[];
@@ -45,6 +47,16 @@ interface RouteInfo {
   distanceText: string;
   durationText: string;
   mode: "google" | "estimate";
+}
+
+interface TouchStartState {
+  x: number;
+  y: number;
+  scrollTop: number;
+}
+
+interface PointerStartState extends TouchStartState {
+  pointerId: number;
 }
 
 const icons: Record<string, IconDefinition> = {
@@ -66,6 +78,9 @@ const getCategory = (category: FacilityCategory) => categoryMap.get(category);
 
 const categoryColor = (facility: Facility) =>
   getCategory(facility.category)?.color || "#2563eb";
+
+const isMobileViewport = () =>
+  typeof window !== "undefined" && window.matchMedia("(max-width: 620px)").matches;
 
 const getCampusBounds = (facilities: Facility[]) => {
   const positions = facilities.map((facility) => facility.position);
@@ -147,8 +162,12 @@ export default function ShindaiMapApp({
   const [shareMessage, setShareMessage] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mobilePanelState, setMobilePanelState] =
+    useState<MobilePanelState>("expanded");
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
+  const selectedPanelTouchRef = useRef<TouchStartState | null>(null);
+  const selectedPanelPointerRef = useRef<PointerStartState | null>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const markersByIdRef = useRef<Map<string, google.maps.Marker>>(new Map());
@@ -245,6 +264,7 @@ export default function ShindaiMapApp({
     setSelectedId(facility.id);
     setRouteInfo(null);
     setMobileMenuOpen(false);
+    setMobilePanelState("expanded");
     if (options?.zoomMap) {
       focusMapOnFacility(facility);
     }
@@ -252,6 +272,113 @@ export default function ShindaiMapApp({
     const url = new URL(window.location.href);
     url.searchParams.set("facility", facility.id);
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  };
+
+  const toggleMobilePanel = () => {
+    setMobilePanelState((state) => (state === "expanded" ? "closed" : "expanded"));
+  };
+
+  const applyMobilePanelSwipe = (
+    start: TouchStartState,
+    clientX: number,
+    clientY: number
+  ) => {
+    const deltaY = clientY - start.y;
+    const deltaX = clientX - start.x;
+    const isVerticalSwipe = Math.abs(deltaY) > 48 && Math.abs(deltaY) > Math.abs(deltaX);
+    if (!isVerticalSwipe) return;
+
+    if (deltaY < 0) {
+      setMobilePanelState("expanded");
+      return;
+    }
+
+    if (start.scrollTop <= 4) {
+      setMobilePanelState("closed");
+    }
+  };
+
+  const handleMobilePanelTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    if (!isMobileViewport()) return;
+    if (event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    selectedPanelTouchRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      scrollTop: event.currentTarget.scrollTop
+    };
+  };
+
+  const handleMobilePanelTouchMove = (event: React.TouchEvent<HTMLElement>) => {
+    if (!isMobileViewport()) return;
+    const start = selectedPanelTouchRef.current;
+    if (!start || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaY = touch.clientY - start.y;
+    const deltaX = touch.clientX - start.x;
+
+    if (
+      deltaY > 0 &&
+      Math.abs(deltaY) > Math.abs(deltaX) &&
+      event.currentTarget.scrollTop <= 0 &&
+      event.nativeEvent.cancelable
+    ) {
+      event.preventDefault();
+    }
+  };
+
+  const handleMobilePanelTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
+    const start = selectedPanelTouchRef.current;
+    selectedPanelTouchRef.current = null;
+    if (!isMobileViewport()) return;
+    if (!start || event.changedTouches.length !== 1) return;
+
+    const touch = event.changedTouches[0];
+    applyMobilePanelSwipe(start, touch.clientX, touch.clientY);
+  };
+
+  const handleMobilePanelPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (!isMobileViewport() || event.pointerType === "touch") return;
+
+    selectedPanelPointerRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      scrollTop: event.currentTarget.scrollTop,
+      pointerId: event.pointerId
+    };
+  };
+
+  const handleMobilePanelPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    if (!isMobileViewport() || event.pointerType === "touch") return;
+
+    const start = selectedPanelPointerRef.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    const deltaY = event.clientY - start.y;
+    const deltaX = event.clientX - start.x;
+    if (
+      deltaY > 0 &&
+      Math.abs(deltaY) > Math.abs(deltaX) &&
+      event.currentTarget.scrollTop <= 0 &&
+      event.nativeEvent.cancelable
+    ) {
+      event.preventDefault();
+    }
+  };
+
+  const handleMobilePanelPointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    const start = selectedPanelPointerRef.current;
+    selectedPanelPointerRef.current = null;
+    if (!isMobileViewport() || event.pointerType === "touch") return;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    applyMobilePanelSwipe(start, event.clientX, event.clientY);
+  };
+
+  const handleMobilePanelPointerCancel = () => {
+    selectedPanelPointerRef.current = null;
   };
 
   const showCurrentLocationOnMap = () => {
@@ -369,6 +496,56 @@ export default function ShindaiMapApp({
       alive = false;
     };
   }, [campusCenters]);
+
+  useEffect(() => {
+    const shell = document.querySelector<HTMLElement>(".map-shell");
+    if (!shell) return;
+
+    let startX = 0;
+    let startY = 0;
+
+    const findScrollContainer = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return null;
+      return target.closest<HTMLElement>(".selected-card, .result-list, .sidebar");
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!event.cancelable || event.touches.length !== 1) return;
+
+      const target = event.target;
+      if (!(target instanceof Node) || !shell.contains(target)) return;
+      if (target instanceof Element && target.closest(".google-map")) return;
+
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+      if (deltaY <= 0 || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+      const scrollContainer = findScrollContainer(target);
+      const scrollContainerCanMove =
+        scrollContainer &&
+        scrollContainer.scrollHeight > scrollContainer.clientHeight &&
+        scrollContainer.scrollTop > 0;
+
+      if (!scrollContainerCanMove && window.scrollY <= 0) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
 
   const previousBoundsKeyRef = useRef("");
 
@@ -656,11 +833,32 @@ export default function ShindaiMapApp({
 
         {selectedFacility && (
           <section
-            className="selected-card"
+            id="selected-facility-panel"
+            className={`selected-card is-mobile-panel-${mobilePanelState}`}
+            aria-label="選択中の施設"
             style={
               { "--facility-color": categoryColor(selectedFacility) } as React.CSSProperties
             }
+            onTouchStart={handleMobilePanelTouchStart}
+            onTouchMove={handleMobilePanelTouchMove}
+            onTouchEnd={handleMobilePanelTouchEnd}
+            onPointerDown={handleMobilePanelPointerDown}
+            onPointerMove={handleMobilePanelPointerMove}
+            onPointerUp={handleMobilePanelPointerUp}
+            onPointerCancel={handleMobilePanelPointerCancel}
           >
+            <button
+              className="mobile-sheet-handle"
+              type="button"
+              aria-controls="selected-facility-panel"
+              aria-expanded={mobilePanelState === "expanded"}
+              aria-label={
+                mobilePanelState === "expanded"
+                  ? "施設メニューを閉じる"
+                  : "施設メニューを開く"
+              }
+              onClick={toggleMobilePanel}
+            />
             <div className="selected-heading">
               <div className="selected-pin" aria-hidden="true">
                 <FontAwesomeIcon icon={faMapPin} />
