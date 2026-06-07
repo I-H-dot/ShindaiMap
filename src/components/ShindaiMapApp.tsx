@@ -19,13 +19,25 @@ import {
   faPaperPlane,
   faRoute,
   faShareNodes,
+  faStop,
+  faTrain,
   faUniversalAccess,
   faUtensils,
+  faVolumeHigh,
+  faVolumeXmark,
   faYenSign
 } from "@fortawesome/free-solid-svg-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { categoryMap } from "../data/categories";
+import { transitStops } from "../data/transit";
 import { formatDistance, formatWalkingTime, metersBetween } from "../lib/distance";
+import {
+  formatStopDistance,
+  getNearestTransitStops,
+  getUpcomingDepartures,
+  type TransitMode,
+  type TransitStopDistance
+} from "../lib/transit";
 import type {
   CampusName,
   CategoryDefinition,
@@ -47,6 +59,24 @@ interface RouteInfo {
   distanceText: string;
   durationText: string;
   mode: "google" | "estimate";
+}
+
+interface NavigationStep {
+  instruction: string;
+  distanceText: string;
+  durationText: string;
+  endLocation: LatLng;
+}
+
+interface NavigationState {
+  active: boolean;
+  destinationName: string;
+  statusText: string;
+  distanceText: string;
+  durationText: string;
+  nextInstruction: string;
+  offRoute: boolean;
+  recalculating: boolean;
 }
 
 interface TouchStartState {
@@ -85,6 +115,169 @@ const isMobileViewport = () =>
 const INITIAL_MAP_ZOOM = 16;
 const FOCUSED_FACILITY_ZOOM = 18;
 const MAP_FIT_BOUNDS_PADDING = 58;
+const OFF_ROUTE_THRESHOLD_METERS = 45;
+const STEP_ARRIVAL_THRESHOLD_METERS = 24;
+const DESTINATION_ARRIVAL_THRESHOLD_METERS = 28;
+const REROUTE_COOLDOWN_MS = 12000;
+
+const cleanRouteInstruction = (instruction: string) => {
+  if (typeof document === "undefined") {
+    return instruction.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  const element = document.createElement("div");
+  element.innerHTML = instruction;
+  return element.textContent?.replace(/\s+/g, " ").trim() || "道なりに進む";
+};
+
+const toProjectedMeters = (point: LatLng, origin: LatLng) => {
+  const averageLat = ((point.lat + origin.lat) / 2) * (Math.PI / 180);
+  return {
+    x: (point.lng - origin.lng) * 111320 * Math.cos(averageLat),
+    y: (point.lat - origin.lat) * 110540
+  };
+};
+
+const distanceToSegmentMeters = (point: LatLng, start: LatLng, end: LatLng) => {
+  const projectedPoint = toProjectedMeters(point, start);
+  const projectedEnd = toProjectedMeters(end, start);
+  const segmentLengthSquared =
+    projectedEnd.x * projectedEnd.x + projectedEnd.y * projectedEnd.y;
+
+  if (segmentLengthSquared === 0) {
+    return metersBetween(point, start);
+  }
+
+  const t = Math.max(
+    0,
+    Math.min(
+      1,
+      (projectedPoint.x * projectedEnd.x + projectedPoint.y * projectedEnd.y) /
+        segmentLengthSquared
+    )
+  );
+  const closest = {
+    x: projectedEnd.x * t,
+    y: projectedEnd.y * t
+  };
+  return Math.hypot(projectedPoint.x - closest.x, projectedPoint.y - closest.y);
+};
+
+const distanceToRoutePathMeters = (point: LatLng, path: LatLng[]) => {
+  if (path.length === 0) return Number.POSITIVE_INFINITY;
+  if (path.length === 1) return metersBetween(point, path[0]);
+
+  let shortest = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < path.length; index += 1) {
+    shortest = Math.min(
+      shortest,
+      distanceToSegmentMeters(point, path[index - 1], path[index])
+    );
+  }
+  return shortest;
+};
+
+const transitModeLabel = (mode: TransitMode) => (mode === "bus" ? "バス" : "電車");
+
+interface TransitDepartureCardProps {
+  title: string;
+  stopDistance: TransitStopDistance | null;
+  now: Date | null;
+  statusText?: string;
+  className?: string;
+}
+
+const TransitDepartureCard = ({
+  title,
+  stopDistance,
+  now,
+  statusText,
+  className = ""
+}: TransitDepartureCardProps) => {
+  if (!stopDistance || !now) return null;
+
+  const { stop, distanceMeters } = stopDistance;
+  const departures = getUpcomingDepartures(stop, now, 2);
+  const icon = stop.mode === "bus" ? faBus : faTrain;
+
+  return (
+    <section className={`transit-card ${className}`} aria-label={title}>
+      <div className="transit-card-heading">
+        <div>
+          <p>{title}</p>
+          <h2>
+            <FontAwesomeIcon icon={icon} />
+            {stop.name}
+          </h2>
+        </div>
+        <span>{formatStopDistance(distanceMeters)}</span>
+      </div>
+      <div className="transit-operator-line">
+        {stop.operator} {stop.line}
+      </div>
+      <div className="departure-grid">
+        {departures.map((departure, index) => (
+          <div key={`${stop.id}-${departure.time}-${index}`} className="departure-item">
+            <span>{index === 0 ? "先発" : "次発"}</span>
+            <strong>{departure.time}</strong>
+            <small>
+              {departure.label}
+              {departure.isNextDay ? "・翌日" : ""}
+            </small>
+          </div>
+        ))}
+      </div>
+      <div className="transit-card-footer">
+        <span>
+          {transitModeLabel(stop.mode)} / {statusText || "現在地から最寄りを表示"}
+        </span>
+        <a href={stop.timetableUrl} target="_blank" rel="noreferrer">
+          公式時刻表
+        </a>
+      </div>
+    </section>
+  );
+};
+
+interface CampusTransitRowProps {
+  title: string;
+  stopDistance: TransitStopDistance | null;
+  now: Date | null;
+}
+
+const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) => {
+  if (!stopDistance || !now) return null;
+
+  const { stop, distanceMeters } = stopDistance;
+  const departures = getUpcomingDepartures(stop, now, 2);
+  const icon = stop.mode === "bus" ? faBus : faTrain;
+
+  return (
+    <div className="campus-transit-row">
+      <div className="campus-transit-main">
+        <FontAwesomeIcon icon={icon} />
+        <div>
+          <strong>
+            {title}: {stop.name}
+          </strong>
+          <span>
+            {stop.operator} {stop.line} / {formatStopDistance(distanceMeters)}
+          </span>
+        </div>
+      </div>
+      <div className="campus-transit-times">
+        {departures.map((departure, index) => (
+          <span key={`${stop.id}-${departure.time}-${index}`}>
+            {index === 0 ? "先発" : "次発"} {departure.time}
+          </span>
+        ))}
+      </div>
+      <a href={stop.timetableUrl} target="_blank" rel="noreferrer">
+        公式時刻表
+      </a>
+    </div>
+  );
+};
 
 const getCampusBounds = (facilities: Facility[]) => {
   const positions = facilities.map((facility) => facility.position);
@@ -161,6 +354,12 @@ export default function ShindaiMapApp({
   );
   const [selectedId, setSelectedId] = useState(initialFacilities[0]?.id || "");
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [navigationState, setNavigationState] = useState<NavigationState | null>(null);
+  const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
+  const [transitPosition, setTransitPosition] = useState<LatLng | null>(null);
+  const [transitStatusText, setTransitStatusText] =
+    useState("現在地から最寄りを確認中");
+  const [now, setNow] = useState<Date | null>(null);
   const [mapMessage, setMapMessage] = useState("Google Maps APIキーを確認中");
   const [googleMapReady, setGoogleMapReady] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
@@ -178,8 +377,65 @@ export default function ShindaiMapApp({
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const markersByIdRef = useRef<Map<string, google.maps.Marker>>(new Map());
   const currentLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const navigationWatchIdRef = useRef<number | null>(null);
+  const navigationDestinationRef = useRef<Facility | null>(null);
+  const navigationRoutePathRef = useRef<LatLng[]>([]);
+  const navigationStepsRef = useRef<NavigationStep[]>([]);
+  const activeNavigationStepIndexRef = useRef(0);
+  const navigationRequestIdRef = useRef(0);
+  const selectedFacilityIdRef = useRef(selectedId);
+  const lastRerouteAtRef = useRef(0);
+  const lastSpokenInstructionRef = useRef("");
+  const voiceGuidanceEnabledRef = useRef(true);
 
   useUrlInitialSelection(facilities, setSelectedId, setSelectedCategories);
+
+  useEffect(() => {
+    voiceGuidanceEnabledRef.current = voiceGuidanceEnabled;
+  }, [voiceGuidanceEnabled]);
+
+  useEffect(() => {
+    const syncNow = () => {
+      setNow(new Date());
+    };
+    syncNow();
+    const timer = window.setInterval(syncNow, 30000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setTransitStatusText("現在地を使えないため選択キャンパス基準");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setTransitPosition({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setTransitStatusText("現在地から最寄りを表示");
+      },
+      () => {
+        setTransitStatusText("現在地未許可のため選択キャンパス基準");
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 120000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (navigationWatchIdRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(navigationWatchIdRef.current);
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 620px)");
@@ -242,6 +498,10 @@ export default function ShindaiMapApp({
     filteredFacilities[0] ||
     null;
 
+  useEffect(() => {
+    selectedFacilityIdRef.current = selectedFacility?.id || "";
+  }, [selectedFacility?.id]);
+
   const mapFacilities = useMemo(() => {
     return filteredFacilities;
   }, [filteredFacilities]);
@@ -285,6 +545,7 @@ export default function ShindaiMapApp({
   const selectFacility = (facility: Facility, options?: { zoomMap?: boolean }) => {
     setSelectedId(facility.id);
     setRouteInfo(null);
+    stopNavigation({ silent: true });
     setMobileMenuOpen(false);
     setMobilePanelState("expanded");
     if (options?.zoomMap) {
@@ -422,6 +683,8 @@ export default function ShindaiMapApp({
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
+        setTransitPosition(currentPosition);
+        setTransitStatusText("現在地から最寄りを表示");
 
         if (googleMapRef.current && typeof google !== "undefined") {
           if (!currentLocationMarkerRef.current) {
@@ -701,6 +964,43 @@ export default function ShindaiMapApp({
     setSelectedCategories(new Set([category]));
   };
 
+  const clearRenderedDirections = () => {
+    directionsRendererRef.current?.set("directions", null);
+  };
+
+  const createNavigationRequest = () => {
+    navigationRequestIdRef.current += 1;
+    return navigationRequestIdRef.current;
+  };
+
+  const isNavigationRequestCurrent = (requestId: number, destination: Facility) =>
+    navigationRequestIdRef.current === requestId &&
+    selectedFacilityIdRef.current === destination.id;
+
+  const stopNavigation = (options?: { keepPanel?: boolean; silent?: boolean }) => {
+    createNavigationRequest();
+
+    if (navigationWatchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(navigationWatchIdRef.current);
+      navigationWatchIdRef.current = null;
+    }
+
+    navigationDestinationRef.current = null;
+    navigationRoutePathRef.current = [];
+    navigationStepsRef.current = [];
+    activeNavigationStepIndexRef.current = 0;
+    lastSpokenInstructionRef.current = "";
+
+    if (!options?.keepPanel) {
+      setNavigationState(null);
+      clearRenderedDirections();
+    }
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
   const estimateRoute = (origin: LatLng, destination: Facility) => {
     const meters = metersBetween(origin, destination.position);
     setRouteInfo({
@@ -710,58 +1010,396 @@ export default function ShindaiMapApp({
     });
   };
 
-  const routeFromCurrentLocation = () => {
-    if (!selectedFacility) return;
+  const speakNavigation = (message: string) => {
+    if (!voiceGuidanceEnabledRef.current) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
-    if (!navigator.geolocation) {
-      estimateRoute(campusCenters[selectedFacility.campus], selectedFacility);
+    const trimmed = message.trim();
+    if (!trimmed || lastSpokenInstructionRef.current === trimmed) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(trimmed);
+    utterance.lang = "ja-JP";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    lastSpokenInstructionRef.current = trimmed;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const updateCurrentLocationMarker = (
+    currentPosition: LatLng,
+    options?: { panMap?: boolean }
+  ) => {
+    setTransitPosition(currentPosition);
+    setTransitStatusText("現在地から最寄りを表示");
+
+    if (!googleMapRef.current || typeof google === "undefined") return;
+
+    if (!currentLocationMarkerRef.current) {
+      currentLocationMarkerRef.current = new google.maps.Marker({
+        map: googleMapRef.current,
+        position: currentPosition,
+        title: "現在地",
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: "#2563eb",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 4,
+          scale: 10
+        },
+        zIndex: 4
+      });
+    } else {
+      currentLocationMarkerRef.current.setPosition(currentPosition);
+      currentLocationMarkerRef.current.setMap(googleMapRef.current);
+    }
+
+    if (options?.panMap) {
+      googleMapRef.current.panTo(currentPosition);
+      googleMapRef.current.setZoom(Math.max(googleMapRef.current.getZoom() || 18, 18));
+    }
+  };
+
+  const extractRouteDetails = (result: google.maps.DirectionsResult) => {
+    const route = result.routes[0];
+    const leg = route?.legs[0];
+    const path =
+      route?.overview_path?.map((point) => ({
+        lat: point.lat(),
+        lng: point.lng()
+      })) || [];
+    const steps =
+      leg?.steps?.map((step) => ({
+        instruction: cleanRouteInstruction(step.instructions || "道なりに進む"),
+        distanceText: step.distance?.text || "",
+        durationText: step.duration?.text || "",
+        endLocation: {
+          lat: step.end_location.lat(),
+          lng: step.end_location.lng()
+        }
+      })) || [];
+
+    return {
+      distanceText: leg?.distance?.text || "-",
+      durationText: leg?.duration?.text || "-",
+      path,
+      steps
+    };
+  };
+
+  const requestWalkingRoute = (origin: LatLng, destination: Facility) => {
+    if (
+      !googleMapRef.current ||
+      typeof google === "undefined" ||
+      !directionsRendererRef.current
+    ) {
+      return Promise.resolve(null);
+    }
+
+    const service = new google.maps.DirectionsService();
+    return new Promise<
+      (ReturnType<typeof extractRouteDetails> & {
+        directionsResult: google.maps.DirectionsResult;
+      }) | null
+    >((resolve) => {
+      service.route(
+        {
+          origin,
+          destination: destination.position,
+          travelMode: google.maps.TravelMode.WALKING
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            resolve({
+              ...extractRouteDetails(result),
+              directionsResult: result
+            });
+            return;
+          }
+          resolve(null);
+        }
+      );
+    });
+  };
+
+  const finishNavigation = () => {
+    createNavigationRequest();
+
+    if (navigationWatchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(navigationWatchIdRef.current);
+      navigationWatchIdRef.current = null;
+    }
+
+    const destination = navigationDestinationRef.current;
+    navigationDestinationRef.current = null;
+    navigationRoutePathRef.current = [];
+    navigationStepsRef.current = [];
+    activeNavigationStepIndexRef.current = 0;
+    setNavigationState((state) =>
+      state
+        ? {
+            ...state,
+            active: false,
+            statusText: "目的地周辺に到着しました",
+            distanceText: "0m",
+            durationText: "0分",
+            nextInstruction: "到着しました",
+            offRoute: false,
+            recalculating: false
+          }
+        : state
+    );
+    speakNavigation(`${destination?.name || "目的地"}周辺に到着しました。`);
+  };
+
+  const startNavigationRoute = async (
+    origin: LatLng,
+    destination: Facility,
+    reason: "start" | "reroute",
+    requestId = createNavigationRequest()
+  ) => {
+    navigationDestinationRef.current = destination;
+    setNavigationState((state) =>
+      state
+        ? {
+            ...state,
+            destinationName: destination.name,
+            statusText: reason === "reroute" ? "ルートを再検索中" : "案内を開始中",
+            recalculating: true
+          }
+        : {
+            active: true,
+            destinationName: destination.name,
+            statusText: reason === "reroute" ? "ルートを再検索中" : "案内を開始中",
+            distanceText: "-",
+            durationText: "-",
+            nextInstruction: "現在地を確認中",
+            offRoute: false,
+            recalculating: true
+          }
+    );
+
+    const routeDetails = await requestWalkingRoute(origin, destination);
+    if (
+      !isNavigationRequestCurrent(requestId, destination) ||
+      navigationDestinationRef.current?.id !== destination.id
+    ) {
       return;
     }
 
+    if (!routeDetails) {
+      const meters = metersBetween(origin, destination.position);
+      estimateRoute(origin, destination);
+      navigationRoutePathRef.current = [];
+      navigationStepsRef.current = [];
+      activeNavigationStepIndexRef.current = 0;
+      setNavigationState({
+        active: true,
+        destinationName: destination.name,
+        statusText: "概算案内中",
+        distanceText: formatDistance(meters),
+        durationText: formatWalkingTime(meters),
+        nextInstruction: "Google Mapsの経路を取得できないため、地図上の目的地へ進んでください",
+        offRoute: false,
+        recalculating: false
+      });
+      speakNavigation(
+        `${destination.name}まで概算案内を開始します。地図上の目的地へ進んでください。`
+      );
+      return;
+    }
+
+    directionsRendererRef.current?.setDirections(routeDetails.directionsResult);
+    navigationRoutePathRef.current = routeDetails.path;
+    navigationStepsRef.current = routeDetails.steps;
+    activeNavigationStepIndexRef.current = 0;
+    setRouteInfo({
+      distanceText: routeDetails.distanceText,
+      durationText: routeDetails.durationText,
+      mode: "google"
+    });
+    const firstInstruction = routeDetails.steps[0]?.instruction || "道なりに進む";
+    setNavigationState({
+      active: true,
+      destinationName: destination.name,
+      statusText: reason === "reroute" ? "修正版ルートで案内中" : "案内中",
+      distanceText: routeDetails.distanceText,
+      durationText: routeDetails.durationText,
+      nextInstruction: firstInstruction,
+      offRoute: false,
+      recalculating: false
+    });
+    speakNavigation(
+      reason === "reroute"
+        ? `ルートを修正しました。${firstInstruction}`
+        : `${destination.name}まで案内を開始します。${firstInstruction}`
+    );
+  };
+
+  const updateNavigationProgress = (currentPosition: LatLng) => {
+    const destination = navigationDestinationRef.current;
+    if (!destination) return;
+
+    updateCurrentLocationMarker(currentPosition);
+    const metersToDestination = metersBetween(currentPosition, destination.position);
+    if (metersToDestination <= DESTINATION_ARRIVAL_THRESHOLD_METERS) {
+      finishNavigation();
+      return;
+    }
+
+    const routePath = navigationRoutePathRef.current;
+    const steps = navigationStepsRef.current;
+    const routeDistance =
+      routePath.length > 0
+        ? distanceToRoutePathMeters(currentPosition, routePath)
+        : 0;
+    const offRoute =
+      routePath.length > 0 && routeDistance > OFF_ROUTE_THRESHOLD_METERS;
+
+    if (offRoute && Date.now() - lastRerouteAtRef.current > REROUTE_COOLDOWN_MS) {
+      lastRerouteAtRef.current = Date.now();
+      setNavigationState((state) =>
+        state
+          ? {
+              ...state,
+              statusText: "ルートから外れたため再検索中",
+              offRoute: true,
+              recalculating: true
+            }
+          : state
+      );
+      speakNavigation("ルートを外れたため、再検索します。");
+      void startNavigationRoute(currentPosition, destination, "reroute");
+      return;
+    }
+
+    let nextStepIndex = activeNavigationStepIndexRef.current;
+    while (
+      nextStepIndex < steps.length &&
+      metersBetween(currentPosition, steps[nextStepIndex].endLocation) <=
+        STEP_ARRIVAL_THRESHOLD_METERS
+    ) {
+      nextStepIndex += 1;
+    }
+
+    if (nextStepIndex !== activeNavigationStepIndexRef.current) {
+      activeNavigationStepIndexRef.current = nextStepIndex;
+      const nextInstruction =
+        steps[nextStepIndex]?.instruction || "目的地周辺です。周囲を確認してください";
+      speakNavigation(nextInstruction);
+    }
+
+    const nextStep =
+      steps[activeNavigationStepIndexRef.current] ||
+      ({
+        instruction: "目的地周辺です。周囲を確認してください",
+        distanceText: "",
+        durationText: "",
+        endLocation: destination.position
+      } satisfies NavigationStep);
+
+    setNavigationState((state) =>
+      state
+        ? {
+            ...state,
+            statusText: offRoute ? "ルートから外れています" : "案内中",
+            distanceText: formatDistance(metersToDestination),
+            durationText: formatWalkingTime(metersToDestination),
+            nextInstruction: nextStep.instruction,
+            offRoute,
+            recalculating: false
+          }
+        : state
+    );
+  };
+
+  const startNavigationWatch = () => {
+    if (!navigator.geolocation) return;
+
+    if (navigationWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(navigationWatchIdRef.current);
+    }
+
+    navigationWatchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const currentPosition = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        updateNavigationProgress(currentPosition);
+      },
+      () => {
+        setNavigationState((state) =>
+          state
+            ? {
+                ...state,
+                statusText: "現在地を更新できません",
+                recalculating: false
+              }
+            : state
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
+    );
+  };
+
+  const routeFromCurrentLocation = () => {
+    if (!selectedFacility) return;
+
+    const destination = selectedFacility;
+    const fallbackOrigin = campusCenters[destination.campus];
+    if (!navigator.geolocation) {
+      const meters = metersBetween(fallbackOrigin, destination.position);
+      estimateRoute(fallbackOrigin, destination);
+      setNavigationState({
+        active: false,
+        destinationName: destination.name,
+        statusText: "現在地を取得できないため概算のみ表示",
+        distanceText: formatDistance(meters),
+        durationText: formatWalkingTime(meters),
+        nextInstruction: "現在地を使えるブラウザで案内を開始できます",
+        offRoute: false,
+        recalculating: false
+      });
+      return;
+    }
+
+    stopNavigation({ silent: true });
+    const requestId = createNavigationRequest();
+    setMapMessage("現在地を取得して案内を開始中");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!isNavigationRequestCurrent(requestId, destination)) return;
+
         const origin = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
 
-        focusMapOnFacility(selectedFacility, FOCUSED_FACILITY_ZOOM);
-
-        if (
-          googleMapRef.current &&
-          typeof google !== "undefined" &&
-          directionsRendererRef.current
-        ) {
-          const service = new google.maps.DirectionsService();
-          service.route(
-            {
-              origin,
-              destination: selectedFacility.position,
-              travelMode: google.maps.TravelMode.WALKING
-            },
-            (result, status) => {
-              if (status === google.maps.DirectionsStatus.OK && result) {
-                directionsRendererRef.current?.setDirections(result);
-                const leg = result.routes[0]?.legs[0];
-                setRouteInfo({
-                  distanceText: leg?.distance?.text || "-",
-                  durationText: leg?.duration?.text || "-",
-                  mode: "google"
-                });
-              } else {
-                estimateRoute(origin, selectedFacility);
-              }
-            }
-          );
-          return;
-        }
-
-        estimateRoute(origin, selectedFacility);
+        updateCurrentLocationMarker(origin, { panMap: true });
+        focusMapOnFacility(destination, FOCUSED_FACILITY_ZOOM);
+        void startNavigationRoute(origin, destination, "start", requestId);
+        startNavigationWatch();
+        setMapMessage("ルート案内中");
       },
       () => {
-        estimateRoute(campusCenters[selectedFacility.campus], selectedFacility);
+        if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+        const meters = metersBetween(fallbackOrigin, destination.position);
+        estimateRoute(fallbackOrigin, destination);
+        setNavigationState({
+          active: false,
+          destinationName: destination.name,
+          statusText: "現在地を取得できなかったため概算のみ表示",
+          distanceText: formatDistance(meters),
+          durationText: formatWalkingTime(meters),
+          nextInstruction: "位置情報を許可すると案内を開始できます",
+          offRoute: false,
+          recalculating: false
+        });
       },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
     );
   };
 
@@ -802,6 +1440,36 @@ export default function ShindaiMapApp({
   const feedbackUrl = selectedFacility
     ? `https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml&title=${encodeURIComponent(`[Data]: ${selectedFacility.name}`)}`
     : "https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml";
+  const fallbackTransitReferencePosition =
+    campus !== "all" ? campusCenters[campus] : campusCenters["六甲台第2"];
+  const selectedTransitReferencePosition = selectedFacility
+    ? selectedFacility.campus === "その他"
+      ? selectedFacility.position
+      : campusCenters[selectedFacility.campus]
+    : fallbackTransitReferencePosition;
+  const transitReferencePosition = transitPosition || selectedTransitReferencePosition;
+  const currentNearestTransit = useMemo(
+    () =>
+      getNearestTransitStops(transitStops, transitReferencePosition, { limit: 1 })[0] ||
+      null,
+    [transitReferencePosition.lat, transitReferencePosition.lng]
+  );
+  const campusNearestBus = useMemo(
+    () =>
+      getNearestTransitStops(transitStops, selectedTransitReferencePosition, {
+        mode: "bus",
+        limit: 1
+      })[0] || null,
+    [selectedTransitReferencePosition.lat, selectedTransitReferencePosition.lng]
+  );
+  const campusNearestTrain = useMemo(
+    () =>
+      getNearestTransitStops(transitStops, selectedTransitReferencePosition, {
+        mode: "train",
+        limit: 1
+      })[0] || null,
+    [selectedTransitReferencePosition.lat, selectedTransitReferencePosition.lng]
+  );
 
   return (
     <main className="map-shell">
@@ -838,63 +1506,75 @@ export default function ShindaiMapApp({
           }`}
           aria-label="検索とキャンパス選択"
         >
-          <div className="search-box">
-            <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="施設・教室を検索"
-              aria-label="施設や教室を検索"
-            />
+          <div className="search-toolbar">
+            <div className="search-box">
+              <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="施設・教室を検索"
+                aria-label="施設や教室を検索"
+              />
+            </div>
+            <button
+              className="mobile-filter-toggle"
+              type="button"
+              aria-label="フィルター"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              <FontAwesomeIcon icon={faFilter} />
+              <span>フィルター</span>
+            </button>
+            <div className="control-grid">
+              <label className="field-label">
+                キャンパス
+                <select
+                  value={campus}
+                  onChange={(event) => {
+                    setCampus(event.target.value as CampusName | "all");
+                    setRouteInfo(null);
+                    stopNavigation({ silent: true });
+                    setSelectedId("");
+                  }}
+                >
+                  <option value="all">全キャンパス</option>
+                  {campusNames.map((campusName) => (
+                    <option key={campusName} value={campusName}>
+                      {campusCenters[campusName].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label">
+                表示
+                <select
+                  value={selectedCategories.size === 1 ? [...selectedCategories][0] : "all"}
+                  onChange={(event) => {
+                    const value = event.target.value as FacilityCategory | "all";
+                    if (value === "all") showAllCategories();
+                    else showOnlyCategory(value);
+                    stopNavigation({ silent: true });
+                    setSelectedId("");
+                  }}
+                >
+                  <option value="all">全カテゴリ</option>
+                  {categoryOptions.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
-          <button
-            className="mobile-filter-toggle"
-            type="button"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <FontAwesomeIcon icon={faFilter} />
-            フィルター
-          </button>
-          <div className="control-grid">
-            <label className="field-label">
-              キャンパス
-              <select
-                value={campus}
-                onChange={(event) => {
-                  setCampus(event.target.value as CampusName | "all");
-                  setRouteInfo(null);
-                  setSelectedId("");
-                }}
-              >
-                <option value="all">全キャンパス</option>
-                {campusNames.map((campusName) => (
-                  <option key={campusName} value={campusName}>
-                    {campusCenters[campusName].label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              表示
-              <select
-                value={selectedCategories.size === 1 ? [...selectedCategories][0] : "all"}
-                onChange={(event) => {
-                  const value = event.target.value as FacilityCategory | "all";
-                  if (value === "all") showAllCategories();
-                  else showOnlyCategory(value);
-                  setSelectedId("");
-                }}
-              >
-                <option value="all">全カテゴリ</option>
-                {categoryOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <TransitDepartureCard
+            title="現在地最寄り"
+            stopDistance={currentNearestTransit}
+            now={now}
+            statusText={transitStatusText}
+            className="mobile-transit-card"
+          />
         </section>
 
         {selectedFacility && (
@@ -951,7 +1631,7 @@ export default function ShindaiMapApp({
                   onClick={routeFromCurrentLocation}
                 >
                   <FontAwesomeIcon icon={faLocationArrow} />
-                  ここへ行く
+                  {navigationState?.active ? "案内中" : "ここへ行く"}
                 </button>
                 <button className="link-button" type="button" onClick={shareSelectedFacility}>
                   <FontAwesomeIcon icon={faShareNodes} />
@@ -968,6 +1648,53 @@ export default function ShindaiMapApp({
                   </span>
                 </div>
               )}
+              {navigationState && (
+                <div
+                  className={`navigation-panel ${
+                    navigationState.offRoute ? "is-off-route" : ""
+                  }`}
+                >
+                  <div className="navigation-panel-header">
+                    <span>
+                      <FontAwesomeIcon icon={faLocationArrow} />
+                      {navigationState.statusText}
+                    </span>
+                    <div className="navigation-controls">
+                      <button
+                        type="button"
+                        onClick={() => setVoiceGuidanceEnabled((enabled) => !enabled)}
+                        aria-label={
+                          voiceGuidanceEnabled ? "音声案内をオフ" : "音声案内をオン"
+                        }
+                      >
+                        <FontAwesomeIcon
+                          icon={voiceGuidanceEnabled ? faVolumeHigh : faVolumeXmark}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          stopNavigation();
+                          setRouteInfo(null);
+                          setMapMessage("案内を終了しました");
+                        }}
+                        aria-label="案内を終了"
+                      >
+                        <FontAwesomeIcon icon={faStop} />
+                      </button>
+                    </div>
+                  </div>
+                  <strong>{navigationState.nextInstruction}</strong>
+                  <div className="navigation-metrics">
+                    <span>{navigationState.durationText}</span>
+                    <span>{navigationState.distanceText}</span>
+                    <span>{navigationState.destinationName}</span>
+                  </div>
+                  {navigationState.recalculating && (
+                    <p>現在地に合わせてルートを更新しています。</p>
+                  )}
+                </div>
+              )}
               <div className="guide-box route-guide">
                 <h3>案内</h3>
                 <ul>
@@ -977,6 +1704,16 @@ export default function ShindaiMapApp({
                   </li>
                   {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
                 </ul>
+              </div>
+              <div className="guide-box campus-transit-guide">
+                <h3>キャンパス最寄りの時刻表</h3>
+                <CampusTransitRow title="バス" stopDistance={campusNearestBus} now={now} />
+                <CampusTransitRow
+                  title="電車"
+                  stopDistance={campusNearestTrain}
+                  now={now}
+                />
+                <p>アプリ内の発車時刻は目安です。正確な便は公式時刻表を確認してください。</p>
               </div>
             </div>
           </section>
@@ -1042,6 +1779,13 @@ export default function ShindaiMapApp({
         >
           <FontAwesomeIcon icon={faCrosshairs} />
         </button>
+        <TransitDepartureCard
+          title="現在地最寄り"
+          stopDistance={currentNearestTransit}
+          now={now}
+          statusText={transitStatusText}
+          className="desktop-transit-card"
+        />
         {!googleMapReady && (
           <div className="fallback-map">
             <div className="fallback-campus-label">
