@@ -996,7 +996,7 @@ export default function ShindaiMapApp({
       clearRenderedDirections();
     }
 
-    if (!options?.silent && typeof window !== "undefined" && "speechSynthesis" in window) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
   };
