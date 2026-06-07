@@ -182,7 +182,7 @@ const transitModeLabel = (mode: TransitMode) => (mode === "bus" ? "バス" : "�
 interface TransitDepartureCardProps {
   title: string;
   stopDistance: TransitStopDistance | null;
-  now: Date;
+  now: Date | null;
   statusText?: string;
   className?: string;
 }
@@ -194,7 +194,7 @@ const TransitDepartureCard = ({
   statusText,
   className = ""
 }: TransitDepartureCardProps) => {
-  if (!stopDistance) return null;
+  if (!stopDistance || !now) return null;
 
   const { stop, distanceMeters } = stopDistance;
   const departures = getUpcomingDepartures(stop, now, 2);
@@ -242,11 +242,11 @@ const TransitDepartureCard = ({
 interface CampusTransitRowProps {
   title: string;
   stopDistance: TransitStopDistance | null;
-  now: Date;
+  now: Date | null;
 }
 
 const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) => {
-  if (!stopDistance) return null;
+  if (!stopDistance || !now) return null;
 
   const { stop, distanceMeters } = stopDistance;
   const departures = getUpcomingDepartures(stop, now, 2);
@@ -359,7 +359,7 @@ export default function ShindaiMapApp({
   const [transitPosition, setTransitPosition] = useState<LatLng | null>(null);
   const [transitStatusText, setTransitStatusText] =
     useState("現在地から最寄りを確認中");
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [mapMessage, setMapMessage] = useState("Google Maps APIキーを確認中");
   const [googleMapReady, setGoogleMapReady] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
@@ -382,6 +382,8 @@ export default function ShindaiMapApp({
   const navigationRoutePathRef = useRef<LatLng[]>([]);
   const navigationStepsRef = useRef<NavigationStep[]>([]);
   const activeNavigationStepIndexRef = useRef(0);
+  const navigationRequestIdRef = useRef(0);
+  const selectedFacilityIdRef = useRef(selectedId);
   const lastRerouteAtRef = useRef(0);
   const lastSpokenInstructionRef = useRef("");
   const voiceGuidanceEnabledRef = useRef(true);
@@ -393,9 +395,11 @@ export default function ShindaiMapApp({
   }, [voiceGuidanceEnabled]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
+    const syncNow = () => {
       setNow(new Date());
-    }, 30000);
+    };
+    syncNow();
+    const timer = window.setInterval(syncNow, 30000);
     return () => {
       window.clearInterval(timer);
     };
@@ -493,6 +497,10 @@ export default function ShindaiMapApp({
     filteredFacilities.find((facility) => facility.id === selectedId) ||
     filteredFacilities[0] ||
     null;
+
+  useEffect(() => {
+    selectedFacilityIdRef.current = selectedFacility?.id || "";
+  }, [selectedFacility?.id]);
 
   const mapFacilities = useMemo(() => {
     return filteredFacilities;
@@ -960,7 +968,18 @@ export default function ShindaiMapApp({
     directionsRendererRef.current?.set("directions", null);
   };
 
+  const createNavigationRequest = () => {
+    navigationRequestIdRef.current += 1;
+    return navigationRequestIdRef.current;
+  };
+
+  const isNavigationRequestCurrent = (requestId: number, destination: Facility) =>
+    navigationRequestIdRef.current === requestId &&
+    selectedFacilityIdRef.current === destination.id;
+
   const stopNavigation = (options?: { keepPanel?: boolean; silent?: boolean }) => {
+    createNavigationRequest();
+
     if (navigationWatchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(navigationWatchIdRef.current);
       navigationWatchIdRef.current = null;
@@ -1079,7 +1098,11 @@ export default function ShindaiMapApp({
     }
 
     const service = new google.maps.DirectionsService();
-    return new Promise<ReturnType<typeof extractRouteDetails> | null>((resolve) => {
+    return new Promise<
+      (ReturnType<typeof extractRouteDetails> & {
+        directionsResult: google.maps.DirectionsResult;
+      }) | null
+    >((resolve) => {
       service.route(
         {
           origin,
@@ -1088,8 +1111,10 @@ export default function ShindaiMapApp({
         },
         (result, status) => {
           if (status === google.maps.DirectionsStatus.OK && result) {
-            directionsRendererRef.current?.setDirections(result);
-            resolve(extractRouteDetails(result));
+            resolve({
+              ...extractRouteDetails(result),
+              directionsResult: result
+            });
             return;
           }
           resolve(null);
@@ -1099,6 +1124,8 @@ export default function ShindaiMapApp({
   };
 
   const finishNavigation = () => {
+    createNavigationRequest();
+
     if (navigationWatchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(navigationWatchIdRef.current);
       navigationWatchIdRef.current = null;
@@ -1129,7 +1156,8 @@ export default function ShindaiMapApp({
   const startNavigationRoute = async (
     origin: LatLng,
     destination: Facility,
-    reason: "start" | "reroute"
+    reason: "start" | "reroute",
+    requestId = createNavigationRequest()
   ) => {
     navigationDestinationRef.current = destination;
     setNavigationState((state) =>
@@ -1153,6 +1181,13 @@ export default function ShindaiMapApp({
     );
 
     const routeDetails = await requestWalkingRoute(origin, destination);
+    if (
+      !isNavigationRequestCurrent(requestId, destination) ||
+      navigationDestinationRef.current?.id !== destination.id
+    ) {
+      return;
+    }
+
     if (!routeDetails) {
       const meters = metersBetween(origin, destination.position);
       estimateRoute(origin, destination);
@@ -1175,6 +1210,7 @@ export default function ShindaiMapApp({
       return;
     }
 
+    directionsRendererRef.current?.setDirections(routeDetails.directionsResult);
     navigationRoutePathRef.current = routeDetails.path;
     navigationStepsRef.current = routeDetails.steps;
     activeNavigationStepIndexRef.current = 0;
@@ -1311,13 +1347,14 @@ export default function ShindaiMapApp({
   const routeFromCurrentLocation = () => {
     if (!selectedFacility) return;
 
-    const fallbackOrigin = campusCenters[selectedFacility.campus];
+    const destination = selectedFacility;
+    const fallbackOrigin = campusCenters[destination.campus];
     if (!navigator.geolocation) {
-      const meters = metersBetween(fallbackOrigin, selectedFacility.position);
-      estimateRoute(fallbackOrigin, selectedFacility);
+      const meters = metersBetween(fallbackOrigin, destination.position);
+      estimateRoute(fallbackOrigin, destination);
       setNavigationState({
         active: false,
-        destinationName: selectedFacility.name,
+        destinationName: destination.name,
         statusText: "現在地を取得できないため概算のみ表示",
         distanceText: formatDistance(meters),
         durationText: formatWalkingTime(meters),
@@ -1329,26 +1366,31 @@ export default function ShindaiMapApp({
     }
 
     stopNavigation({ silent: true });
+    const requestId = createNavigationRequest();
     setMapMessage("現在地を取得して案内を開始中");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!isNavigationRequestCurrent(requestId, destination)) return;
+
         const origin = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
 
         updateCurrentLocationMarker(origin, { panMap: true });
-        focusMapOnFacility(selectedFacility, FOCUSED_FACILITY_ZOOM);
-        void startNavigationRoute(origin, selectedFacility, "start");
+        focusMapOnFacility(destination, FOCUSED_FACILITY_ZOOM);
+        void startNavigationRoute(origin, destination, "start", requestId);
         startNavigationWatch();
         setMapMessage("ルート案内中");
       },
       () => {
-        const meters = metersBetween(fallbackOrigin, selectedFacility.position);
-        estimateRoute(fallbackOrigin, selectedFacility);
+        if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+        const meters = metersBetween(fallbackOrigin, destination.position);
+        estimateRoute(fallbackOrigin, destination);
         setNavigationState({
           active: false,
-          destinationName: selectedFacility.name,
+          destinationName: destination.name,
           statusText: "現在地を取得できなかったため概算のみ表示",
           distanceText: formatDistance(meters),
           durationText: formatWalkingTime(meters),
