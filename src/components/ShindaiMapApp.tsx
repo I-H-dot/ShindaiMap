@@ -1440,33 +1440,33 @@ export default function ShindaiMapApp({
   const feedbackUrl = selectedFacility
     ? `https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml&title=${encodeURIComponent(`[Data]: ${selectedFacility.name}`)}`
     : "https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml";
-  const transitReferencePosition =
-    transitPosition ||
-    (selectedFacility ? campusCenters[selectedFacility.campus] : campusCenters["六甲台第2"]);
+  const selectedTransitReferencePosition = selectedFacility
+    ? selectedFacility.campus === "その他"
+      ? selectedFacility.position
+      : campusCenters[selectedFacility.campus]
+    : campusCenters["六甲台第2"];
+  const transitReferencePosition = transitPosition || selectedTransitReferencePosition;
   const currentNearestTransit = useMemo(
     () =>
       getNearestTransitStops(transitStops, transitReferencePosition, { limit: 1 })[0] ||
       null,
     [transitReferencePosition.lat, transitReferencePosition.lng]
   );
-  const selectedCampusPosition = selectedFacility
-    ? campusCenters[selectedFacility.campus]
-    : campusCenters["六甲台第2"];
   const campusNearestBus = useMemo(
     () =>
-      getNearestTransitStops(transitStops, selectedCampusPosition, {
+      getNearestTransitStops(transitStops, selectedTransitReferencePosition, {
         mode: "bus",
         limit: 1
       })[0] || null,
-    [selectedCampusPosition.lat, selectedCampusPosition.lng]
+    [selectedTransitReferencePosition.lat, selectedTransitReferencePosition.lng]
   );
   const campusNearestTrain = useMemo(
     () =>
-      getNearestTransitStops(transitStops, selectedCampusPosition, {
+      getNearestTransitStops(transitStops, selectedTransitReferencePosition, {
         mode: "train",
         limit: 1
       })[0] || null,
-    [selectedCampusPosition.lat, selectedCampusPosition.lng]
+    [selectedTransitReferencePosition.lat, selectedTransitReferencePosition.lng]
   );
 
   return (
