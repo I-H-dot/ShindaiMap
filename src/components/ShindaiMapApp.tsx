@@ -1440,11 +1440,13 @@ export default function ShindaiMapApp({
   const feedbackUrl = selectedFacility
     ? `https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml&title=${encodeURIComponent(`[Data]: ${selectedFacility.name}`)}`
     : "https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml";
+  const fallbackTransitReferencePosition =
+    campus !== "all" ? campusCenters[campus] : campusCenters["六甲台第2"];
   const selectedTransitReferencePosition = selectedFacility
     ? selectedFacility.campus === "その他"
       ? selectedFacility.position
       : campusCenters[selectedFacility.campus]
-    : campusCenters["六甲台第2"];
+    : fallbackTransitReferencePosition;
   const transitReferencePosition = transitPosition || selectedTransitReferencePosition;
   const currentNearestTransit = useMemo(
     () =>
