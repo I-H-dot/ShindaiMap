@@ -33,6 +33,8 @@ import { transitStops } from "../data/transit";
 import { formatDistance, formatWalkingTime, metersBetween } from "../lib/distance";
 import {
   formatStopDistance,
+  getTransitDirections,
+  getTransitTimetableLinks,
   getNearestTransitStops,
   getUpcomingDepartures,
   type TransitMode,
@@ -46,6 +48,7 @@ import type {
   LatLng
 } from "../lib/types";
 import { withBasePath } from "../lib/urls";
+import UiTuneKit from "./UiTuneKit";
 
 type MobilePanelState = "expanded" | "closed";
 
@@ -185,6 +188,13 @@ interface TransitDepartureCardProps {
   now: Date | null;
   statusText?: string;
   className?: string;
+  modeOptions?: Array<{
+    mode: TransitMode;
+    label: string;
+    stopDistance: TransitStopDistance | null;
+  }>;
+  selectedMode?: TransitMode;
+  onModeChange?: (mode: TransitMode) => void;
 }
 
 const TransitDepartureCard = ({
@@ -192,13 +202,35 @@ const TransitDepartureCard = ({
   stopDistance,
   now,
   statusText,
-  className = ""
+  className = "",
+  modeOptions,
+  selectedMode,
+  onModeChange
 }: TransitDepartureCardProps) => {
-  if (!stopDistance || !now) return null;
+  const [selectedDirections, setSelectedDirections] = useState<Record<string, string>>({});
 
-  const { stop, distanceMeters } = stopDistance;
-  const departures = getUpcomingDepartures(stop, now, 2);
+  const activeModeOption =
+    modeOptions?.find((option) => option.mode === selectedMode && option.stopDistance) ||
+    modeOptions?.find((option) => option.stopDistance);
+  const activeStopDistance = activeModeOption?.stopDistance || stopDistance;
+
+  if (!activeStopDistance || !now) return null;
+
+  const { stop, distanceMeters } = activeStopDistance;
+  const directions = getTransitDirections(stop);
+  const selectedDirection = selectedDirections[stop.id];
+  const activeDirection =
+    selectedDirection && directions.includes(selectedDirection)
+      ? selectedDirection
+      : directions[0] || stop.direction;
+  const departures = getUpcomingDepartures(stop, now, 2, activeDirection);
   const icon = stop.mode === "bus" ? faBus : faTrain;
+  const canShowDepartures = stop.mode !== "train" || Boolean(stop.directionSchedules);
+  const officialLinks = getTransitTimetableLinks(stop, activeDirection);
+  const primaryOfficialLink = officialLinks[0] || {
+    label: "公式時刻表",
+    url: stop.timetableUrl
+  };
 
   return (
     <section className={`transit-card ${className}`} aria-label={title}>
@@ -210,29 +242,79 @@ const TransitDepartureCard = ({
             {stop.name}
           </h2>
         </div>
-        <span>{formatStopDistance(distanceMeters)}</span>
+        {modeOptions && onModeChange ? (
+          <div className="transit-mode-switch" aria-label="時刻表の種類">
+            {modeOptions.map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                className={option.mode === activeModeOption?.mode ? "is-active" : ""}
+                aria-pressed={option.mode === activeModeOption?.mode}
+                disabled={!option.stopDistance}
+                onClick={() => onModeChange(option.mode)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span>{formatStopDistance(distanceMeters)}</span>
+        )}
       </div>
       <div className="transit-operator-line">
         {stop.operator} {stop.line}
       </div>
-      <div className="departure-grid">
-        {departures.map((departure, index) => (
-          <div key={`${stop.id}-${departure.time}-${index}`} className="departure-item">
-            <span>{index === 0 ? "先発" : "次発"}</span>
-            <strong>{departure.time}</strong>
-            <small>
-              {departure.label}
-              {departure.isNextDay ? "・翌日" : ""}
-            </small>
-          </div>
+      <div className="transit-direction-list" aria-label="方面">
+        {directions.map((direction) => (
+          <button
+            key={direction}
+            className={direction === activeDirection ? "is-active" : ""}
+            type="button"
+            aria-pressed={direction === activeDirection}
+            onClick={() =>
+              setSelectedDirections((currentDirections) => ({
+                ...currentDirections,
+                [stop.id]: direction
+              }))
+            }
+          >
+            {direction}
+          </button>
         ))}
       </div>
+      {canShowDepartures ? (
+        <div className="departure-grid">
+          {departures.map((departure, index) => (
+            <div key={`${stop.id}-${departure.time}-${index}`} className="departure-item">
+              <span>{index === 0 ? "先発" : "次発"}</span>
+              <strong>{departure.time}</strong>
+              <small className="departure-direction">{departure.direction}</small>
+              <small>
+                {departure.label}
+                {departure.isNextDay ? "・翌日" : ""}
+              </small>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="transit-official-only">
+          <strong>{activeDirection}の公式時刻表で確認してください</strong>
+          <span>鉄道の発車時刻は公式サイトの再利用条件を確認できるまで、アプリ内に転載しません。</span>
+          <div className="transit-official-link-list">
+            {officialLinks.map((link) => (
+              <a key={`${stop.id}-${link.label}`} href={link.url} target="_blank" rel="noreferrer">
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="transit-card-footer">
         <span>
           {transitModeLabel(stop.mode)} / {statusText || "現在地から最寄りを表示"}
         </span>
-        <a href={stop.timetableUrl} target="_blank" rel="noreferrer">
-          公式時刻表
+        <a href={primaryOfficialLink.url} target="_blank" rel="noreferrer">
+          {primaryOfficialLink.label}
         </a>
       </div>
     </section>
@@ -246,11 +328,25 @@ interface CampusTransitRowProps {
 }
 
 const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) => {
+  const [selectedDirections, setSelectedDirections] = useState<Record<string, string>>({});
+
   if (!stopDistance || !now) return null;
 
   const { stop, distanceMeters } = stopDistance;
-  const departures = getUpcomingDepartures(stop, now, 2);
+  const directions = getTransitDirections(stop);
+  const selectedDirection = selectedDirections[stop.id];
+  const activeDirection =
+    selectedDirection && directions.includes(selectedDirection)
+      ? selectedDirection
+      : directions[0] || stop.direction;
+  const departures = getUpcomingDepartures(stop, now, 2, activeDirection);
   const icon = stop.mode === "bus" ? faBus : faTrain;
+  const canShowDepartures = stop.mode !== "train" || Boolean(stop.directionSchedules);
+  const officialLinks = getTransitTimetableLinks(stop, activeDirection);
+  const primaryOfficialLink = officialLinks[0] || {
+    label: "公式時刻表",
+    url: stop.timetableUrl
+  };
 
   return (
     <div className="campus-transit-row">
@@ -263,17 +359,44 @@ const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) =
           <span>
             {stop.operator} {stop.line} / {formatStopDistance(distanceMeters)}
           </span>
+          <div className="campus-transit-direction-list" aria-label="方面">
+            {directions.map((direction) => (
+              <button
+                key={direction}
+                className={direction === activeDirection ? "is-active" : ""}
+                type="button"
+                aria-pressed={direction === activeDirection}
+                onClick={() =>
+                  setSelectedDirections((currentDirections) => ({
+                    ...currentDirections,
+                    [stop.id]: direction
+                  }))
+                }
+              >
+                {direction}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="campus-transit-times">
-        {departures.map((departure, index) => (
-          <span key={`${stop.id}-${departure.time}-${index}`}>
-            {index === 0 ? "先発" : "次発"} {departure.time}
-          </span>
-        ))}
-      </div>
-      <a href={stop.timetableUrl} target="_blank" rel="noreferrer">
-        公式時刻表
+      {canShowDepartures ? (
+        <div className="campus-transit-times">
+          {departures.map((departure, index) => (
+            <span key={`${stop.id}-${departure.time}-${index}`}>
+              <strong>
+                {index === 0 ? "先発" : "次発"} {departure.time}
+              </strong>
+              <small>{departure.direction}</small>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="campus-transit-official-only">
+          {activeDirection}の時刻は公式時刻表で確認してください。
+        </p>
+      )}
+      <a href={primaryOfficialLink.url} target="_blank" rel="noreferrer">
+        {primaryOfficialLink.label}
       </a>
     </div>
   );
@@ -359,6 +482,7 @@ export default function ShindaiMapApp({
   const [transitPosition, setTransitPosition] = useState<LatLng | null>(null);
   const [transitStatusText, setTransitStatusText] =
     useState("現在地から最寄りを確認中");
+  const [desktopTransitMode, setDesktopTransitMode] = useState<TransitMode>("bus");
   const [now, setNow] = useState<Date | null>(null);
   const [mapMessage, setMapMessage] = useState("Google Maps APIキーを確認中");
   const [googleMapReady, setGoogleMapReady] = useState(false);
@@ -1454,6 +1578,22 @@ export default function ShindaiMapApp({
       null,
     [transitReferencePosition.lat, transitReferencePosition.lng]
   );
+  const currentNearestBus = useMemo(
+    () =>
+      getNearestTransitStops(transitStops, transitReferencePosition, {
+        mode: "bus",
+        limit: 1
+      })[0] || null,
+    [transitReferencePosition.lat, transitReferencePosition.lng]
+  );
+  const currentNearestTrain = useMemo(
+    () =>
+      getNearestTransitStops(transitStops, transitReferencePosition, {
+        mode: "train",
+        limit: 1
+      })[0] || null,
+    [transitReferencePosition.lat, transitReferencePosition.lng]
+  );
   const campusNearestBus = useMemo(
     () =>
       getNearestTransitStops(transitStops, selectedTransitReferencePosition, {
@@ -1720,23 +1860,141 @@ export default function ShindaiMapApp({
         )}
 
         <section id="search-results" className="result-list" aria-label="検索結果">
-          {filteredFacilities.slice(0, 16).map((facility) => (
-            <button
-              key={facility.id}
-              className={`result-card ${facility.id === selectedFacility?.id ? "is-active" : ""}`}
-              type="button"
-              onClick={() => selectFacility(facility, { zoomMap: true })}
-            >
-              <div className="result-top">
-                <h3>{facility.name}</h3>
-                <span className="pill">
-                  {facility.officialMapNumber
-                    ? `No.${facility.officialMapNumber}`
-                    : getCategory(facility.category)?.shortLabel}
-                </span>
-              </div>
-            </button>
-          ))}
+          {filteredFacilities.slice(0, 16).map((facility) => {
+            const isActive = facility.id === selectedFacility?.id;
+            const resultCategory = getCategory(facility.category);
+
+            return (
+              <article
+                key={facility.id}
+                className={`result-card ${isActive ? "is-active" : ""}`}
+                style={
+                  { "--facility-color": categoryColor(facility) } as React.CSSProperties
+                }
+              >
+                <button
+                  className="result-select-button"
+                  type="button"
+                  aria-expanded={isActive}
+                  onClick={() => selectFacility(facility, { zoomMap: true })}
+                >
+                  <div className="result-top">
+                    <h3>{facility.name}</h3>
+                    <span className="pill">
+                      {facility.officialMapNumber
+                        ? `No.${facility.officialMapNumber}`
+                        : resultCategory?.shortLabel}
+                    </span>
+                  </div>
+                  <p>
+                    {facility.campus} / {facility.area}
+                  </p>
+                </button>
+
+                {isActive && selectedFacility && (
+                  <div className="result-expanded">
+                    <div className="selected-meta">
+                      <span className="pill">{selectedFacility.campus}</span>
+                      <span className="pill">{selectedCategory?.shortLabel}</span>
+                      <span className="pill">{selectedFacility.area}</span>
+                      {selectedFacility.officialMapNumber && (
+                        <span className="pill">
+                          公式No.{selectedFacility.officialMapNumber}
+                        </span>
+                      )}
+                    </div>
+                    <div className="action-grid">
+                      <button
+                        className="action-button primary"
+                        type="button"
+                        onClick={routeFromCurrentLocation}
+                      >
+                        <FontAwesomeIcon icon={faLocationArrow} />
+                        {navigationState?.active ? "案内中" : "ここへ行く"}
+                      </button>
+                      <button
+                        className="link-button"
+                        type="button"
+                        onClick={shareSelectedFacility}
+                      >
+                        <FontAwesomeIcon icon={faShareNodes} />
+                        共有
+                      </button>
+                    </div>
+                    {shareMessage && <p className="share-result">{shareMessage}</p>}
+                    {routeInfo && (
+                      <div className="route-panel">
+                        <FontAwesomeIcon icon={faRoute} />
+                        <span>
+                          {routeInfo.durationText} / {routeInfo.distanceText}
+                          {routeInfo.mode === "estimate" ? "（概算）" : ""}
+                        </span>
+                      </div>
+                    )}
+                    {navigationState && (
+                      <div
+                        className={`navigation-panel ${
+                          navigationState.offRoute ? "is-off-route" : ""
+                        }`}
+                      >
+                        <div className="navigation-panel-header">
+                          <span>
+                            <FontAwesomeIcon icon={faLocationArrow} />
+                            {navigationState.statusText}
+                          </span>
+                          <div className="navigation-controls">
+                            <button
+                              type="button"
+                              onClick={() => setVoiceGuidanceEnabled((enabled) => !enabled)}
+                              aria-label={
+                                voiceGuidanceEnabled ? "音声案内をオフ" : "音声案内をオン"
+                              }
+                            >
+                              <FontAwesomeIcon
+                                icon={
+                                  voiceGuidanceEnabled ? faVolumeHigh : faVolumeXmark
+                                }
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                stopNavigation();
+                                setRouteInfo(null);
+                                setMapMessage("案内を終了しました");
+                              }}
+                              aria-label="案内を終了"
+                            >
+                              <FontAwesomeIcon icon={faStop} />
+                            </button>
+                          </div>
+                        </div>
+                        <strong>{navigationState.nextInstruction}</strong>
+                        <div className="navigation-metrics">
+                          <span>{navigationState.durationText}</span>
+                          <span>{navigationState.distanceText}</span>
+                          <span>{navigationState.destinationName}</span>
+                        </div>
+                        {navigationState.recalculating && (
+                          <p>現在地に合わせてルートを更新しています。</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="guide-box route-guide">
+                      <h3>案内</h3>
+                      <ul>
+                        <li>
+                          キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
+                          （{formatDistance(campusDistance)}）
+                        </li>
+                        {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
           {filteredFacilities.length === 0 && (
             <div className="result-card">
               <h3>該当する施設がありません</h3>
@@ -1781,10 +2039,18 @@ export default function ShindaiMapApp({
         </button>
         <TransitDepartureCard
           title="現在地最寄り"
-          stopDistance={currentNearestTransit}
+          stopDistance={
+            desktopTransitMode === "bus" ? currentNearestBus : currentNearestTrain
+          }
           now={now}
           statusText={transitStatusText}
           className="desktop-transit-card"
+          modeOptions={[
+            { mode: "bus", label: "バス", stopDistance: currentNearestBus },
+            { mode: "train", label: "電車", stopDistance: currentNearestTrain }
+          ]}
+          selectedMode={desktopTransitMode}
+          onModeChange={setDesktopTransitMode}
         />
         {!googleMapReady && (
           <div className="fallback-map">
@@ -1825,6 +2091,7 @@ export default function ShindaiMapApp({
         )}
 
       </section>
+      <UiTuneKit />
     </main>
   );
 }

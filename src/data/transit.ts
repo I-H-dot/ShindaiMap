@@ -253,11 +253,23 @@ const transitStopSeed = [
     mode: "train",
     operator: "JR",
     line: "JR神戸線",
-    direction: "三ノ宮・大阪方面 / 神戸・姫路方面",
+    direction: "尼崎・大阪・京都方面 / 三ノ宮・姫路方面",
     campus: "六甲台第2",
     position: { lat: 34.71458, lng: 135.23843 },
     timetableUrl: "https://eki.jr-odekake.net/top?id=0610140",
-    note: "JRおでかけネットで最新時刻表を確認できます。",
+    timetableLinks: [
+      {
+        label: "尼崎・大阪・京都方面",
+        direction: "尼崎・大阪・京都方面",
+        url: "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=1&MD=3"
+      },
+      {
+        label: "三ノ宮・姫路方面",
+        direction: "三ノ宮・姫路方面",
+        url: "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=0&MD=3"
+      }
+    ],
+    note: "JRおでかけネットで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: jrWeekday, weekend: jrWeekend }
   },
   {
@@ -270,7 +282,29 @@ const transitStopSeed = [
     campus: "六甲台第1",
     position: { lat: 34.71968, lng: 135.23372 },
     timetableUrl: "https://www.hankyu.co.jp/station/rokko.html",
-    note: "阪急電鉄の駅ページで最新時刻表を確認できます。",
+    timetableLinks: [
+      {
+        label: "大阪梅田方面 平日",
+        direction: "大阪梅田方面",
+        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_1_w.html"
+      },
+      {
+        label: "大阪梅田方面 土休日",
+        direction: "大阪梅田方面",
+        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_1_h.html"
+      },
+      {
+        label: "神戸三宮方面 平日",
+        direction: "神戸三宮方面",
+        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_2_w.html"
+      },
+      {
+        label: "神戸三宮方面 土休日",
+        direction: "神戸三宮方面",
+        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_2_h.html"
+      }
+    ],
+    note: "阪急電鉄の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: hankyuWeekday, weekend: hankyuWeekend }
   },
   {
@@ -283,7 +317,13 @@ const transitStopSeed = [
     campus: "六甲台第2",
     position: { lat: 34.71471, lng: 135.2555 },
     timetableUrl: "https://www.hanshin.co.jp/station/mikage.html",
-    note: "阪神電鉄の駅ページで最新時刻表を確認できます。",
+    timetableLinks: [
+      {
+        label: "御影駅 公式時刻表",
+        url: "https://www.hanshin.co.jp/station/mikage.html"
+      }
+    ],
+    note: "阪神電鉄の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend }
   },
   {
@@ -296,7 +336,13 @@ const transitStopSeed = [
     campus: "深江",
     position: { lat: 34.72252, lng: 135.29184 },
     timetableUrl: "https://www.hanshin.co.jp/station/fukae.html",
-    note: "阪神電鉄の駅ページで最新時刻表を確認できます。",
+    timetableLinks: [
+      {
+        label: "深江駅 公式時刻表",
+        url: "https://www.hanshin.co.jp/station/fukae.html"
+      }
+    ],
+    note: "阪神電鉄の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend }
   },
   {
@@ -309,7 +355,13 @@ const transitStopSeed = [
     campus: "名谷",
     position: { lat: 34.67919, lng: 135.09443 },
     timetableUrl: "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/",
-    note: "神戸市交通局の駅時刻表で最新時刻表を確認できます。",
+    timetableLinks: [
+      {
+        label: "名谷駅 公式時刻表",
+        url: "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/"
+      }
+    ],
+    note: "神戸市交通局の駅時刻表で最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: subwayWeekday, weekend: subwayWeekend }
   },
   {
@@ -322,7 +374,13 @@ const transitStopSeed = [
     campus: "楠",
     position: { lat: 34.68404, lng: 135.1741 },
     timetableUrl: "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/",
-    note: "楠キャンパスは大倉山駅から徒歩圏です。",
+    timetableLinks: [
+      {
+        label: "大倉山駅 公式時刻表",
+        url: "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/"
+      }
+    ],
+    note: "楠キャンパスは大倉山駅から徒歩圏です。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: subwayWeekday, weekend: subwayWeekend }
   },
   {
@@ -335,7 +393,13 @@ const transitStopSeed = [
     campus: "その他",
     position: { lat: 34.66686, lng: 135.21136 },
     timetableUrl: "https://www.knt-liner.co.jp/station/804/",
-    note: "神戸新交通の駅ページで最新時刻表を確認できます。",
+    timetableLinks: [
+      {
+        label: "みなとじま駅 公式時刻表",
+        url: "https://www.knt-liner.co.jp/station/804/"
+      }
+    ],
+    note: "神戸新交通の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
     schedule: { weekday: portlinerWeekday, weekend: portlinerWeekend }
   }
 ] satisfies TransitStop[];

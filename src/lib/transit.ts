@@ -21,16 +21,29 @@ export interface TransitStop {
   campus: CampusName;
   position: LatLng;
   timetableUrl: string;
+  timetableLinks?: Array<{
+    label: string;
+    url: string;
+    direction?: string;
+  }>;
   note: string;
   schedule: {
     weekday: string[];
     weekend: string[];
   };
+  directionSchedules?: Record<
+    string,
+    {
+      weekday: string[];
+      weekend: string[];
+    }
+  >;
 }
 
 export interface TransitDeparture {
   time: string;
   label: string;
+  direction: string;
   minutesUntil: number;
   isNextDay: boolean;
 }
@@ -76,17 +89,38 @@ export const getTransitServiceDay = (date: Date) => {
   return weekday === "Sat" || weekday === "Sun" ? "weekend" : "weekday";
 };
 
+export const getTransitDirections = (stop: TransitStop) =>
+  stop.direction
+    .split("/")
+    .map((direction) => direction.trim())
+    .filter(Boolean);
+
+export const getTransitTimetableLinks = (stop: TransitStop, direction?: string) => {
+  const links = stop.timetableLinks || [];
+  const directionLinks = direction
+    ? links.filter((link) => link.direction === direction)
+    : [];
+  const generalLinks = links.filter((link) => !link.direction);
+
+  if (directionLinks.length) return directionLinks;
+  if (generalLinks.length) return generalLinks;
+
+  return [{ label: "公式時刻表", url: stop.timetableUrl }];
+};
+
 export const getUpcomingDepartures = (
   stop: TransitStop,
   date: Date,
-  count = 2
+  count = 2,
+  direction = stop.direction
 ): TransitDeparture[] => {
   const serviceDay = getTransitServiceDay(date);
   const tomorrowDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
   const nextDay = getTransitServiceDay(tomorrowDate);
   const { minutes: nowMinutes } = getTransitDateParts(date);
-  const today = stop.schedule[serviceDay].map((time) => toMinutes(time));
-  const tomorrow = stop.schedule[nextDay].map((time) => toMinutes(time) + 1440);
+  const schedule = stop.directionSchedules?.[direction] || stop.schedule;
+  const today = schedule[serviceDay].map((time) => toMinutes(time));
+  const tomorrow = schedule[nextDay].map((time) => toMinutes(time) + 1440);
 
   return [...today, ...tomorrow]
     .filter((minutes) => minutes >= nowMinutes)
@@ -96,6 +130,7 @@ export const getUpcomingDepartures = (
       return {
         time: formatClock(minutes),
         label: minutesUntil === 0 ? "まもなく" : `${minutesUntil}分後`,
+        direction,
         minutesUntil,
         isNextDay: minutes >= 1440
       };
