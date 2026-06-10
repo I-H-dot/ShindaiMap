@@ -130,15 +130,22 @@ export const getUpcomingDepartures = (
   direction = stop.direction
 ): TransitDeparture[] => {
   const serviceDay = getTransitServiceDay(date);
+  const yesterdayDate = new Date(date.getTime() - 24 * 60 * 60 * 1000);
   const tomorrowDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+  const previousDay = getTransitServiceDay(yesterdayDate);
   const nextDay = getTransitServiceDay(tomorrowDate);
   const { minutes: nowMinutes } = getTransitDateParts(date);
   const schedule = stop.directionSchedules?.[direction] || stop.schedule;
+  const yesterdayLateNight = getScheduleTimes(schedule, previousDay)
+    .map((time) => toMinutes(time))
+    .filter((minutes) => minutes >= 1440)
+    .map((minutes) => minutes - 1440);
   const today = getScheduleTimes(schedule, serviceDay).map((time) => toMinutes(time));
   const tomorrow = getScheduleTimes(schedule, nextDay).map((time) => toMinutes(time) + 1440);
 
-  return [...today, ...tomorrow]
+  return [...yesterdayLateNight, ...today, ...tomorrow]
     .filter((minutes) => minutes >= nowMinutes)
+    .sort((a, b) => a - b)
     .slice(0, count)
     .map((minutes) => {
       const minutesUntil = minutes - nowMinutes;

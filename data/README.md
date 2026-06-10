@@ -31,7 +31,7 @@
 - ODPTやGTFSなど、対象事業者の時刻表データを利用できるライセンスとAPIキーを明記する。
 - 出典、ライセンス、確認日、更新方法をPull Requestに記載する。
 
-月次取得は[`../scraiping/try.py`](../scraiping/try.py)で実行します。GitHub Actionsの[`../.github/workflows/update-train-timetables.yml`](../.github/workflows/update-train-timetables.yml)が毎月1日に生成ファイルを更新します。手元で更新する場合は`npm run scrape:train-timetables`を実行してください。
+月次取得は[`../scraiping/trainScheduleGetter.py`](../scraiping/trainScheduleGetter.py)で実行します。GitHub Actionsの[`../.github/workflows/update-train-timetables.yml`](../.github/workflows/update-train-timetables.yml)が毎月1日に生成ファイルを更新します。手元で更新する場合は`npm run scrape:train-timetables`を実行してください。
 
 ## 変更方針
 

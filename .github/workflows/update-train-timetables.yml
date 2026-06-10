@@ -28,7 +28,7 @@ jobs:
           python-version: "3.13"
 
       - name: Scrape train timetables
-        run: python3 scraiping/try.py --output src/data/generated/trainTimetables.ts
+        run: python3 scraiping/trainScheduleGetter.py --output src/data/generated/trainTimetables.ts
 
       - name: Commit generated timetable data
         run: |

@@ -20,7 +20,7 @@
     "test": "vitest run",
     "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro check",
     "check": "npm run test && npm run build",
-    "scrape:train-timetables": "python3 scraiping/try.py --output src/data/generated/trainTimetables.ts"
+    "scrape:train-timetables": "python3 scraiping/trainScheduleGetter.py --output src/data/generated/trainTimetables.ts"
   },
   "dependencies": {
     "@astrojs/react": "^5.0.7",

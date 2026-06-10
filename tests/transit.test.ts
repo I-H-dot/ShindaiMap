@@ -155,6 +155,42 @@ describe("transit helpers", () => {
     expect(westDepartures[0].time).toBe("09:20");
   });
 
+  it("loads generated train timetables for every displayed train direction", () => {
+    const trainStops = transitStops.filter((stop) => stop.mode === "train");
+    expect(trainStops.length).toBeGreaterThan(0);
+
+    for (const stop of trainStops) {
+      const directions = getTransitDirections(stop);
+      expect(stop.directionSchedules).toBeDefined();
+
+      for (const direction of directions) {
+        const schedule = stop.directionSchedules?.[direction];
+        expect(schedule?.weekday.length).toBeGreaterThan(0);
+        expect(schedule?.saturday?.length).toBeGreaterThan(0);
+        expect(schedule?.holiday?.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("returns first and next train departures from the selected generated direction", () => {
+    const stop = transitStops.find((candidate) => candidate.id === "hankyu-rokko");
+    expect(stop).toBeDefined();
+
+    const direction = "神戸三宮・新開地方面";
+    const departures = getUpcomingDepartures(
+      stop!,
+      new Date("2026-06-07T22:20:00+09:00"),
+      2,
+      direction
+    );
+
+    expect(departures).toHaveLength(2);
+    expect(departures[0].direction).toBe(direction);
+    expect(departures[0].time).toMatch(/^\d{2}:\d{2}$/);
+    expect(departures[0].minutesUntil).toBeGreaterThanOrEqual(0);
+    expect(departures[1].minutesUntil).toBeGreaterThan(departures[0].minutesUntil);
+  });
+
   it("distinguishes Saturday from Sunday and holiday train schedules", () => {
     expect(getTransitServiceDay(new Date("2026-06-06T09:00:00+09:00"))).toBe(
       "saturday"
@@ -195,6 +231,43 @@ describe("transit helpers", () => {
 
     expect(saturdayDepartures[0].time).toBe("09:10");
     expect(holidayDepartures[0].time).toBe("09:30");
+  });
+
+  it("keeps late-night 24-hour timetable entries in service-day order", () => {
+    const stop: TransitStop = {
+      id: "test-late-night-station",
+      name: "深夜駅",
+      mode: "train",
+      operator: "阪急電鉄",
+      line: "テスト線",
+      direction: "東方面",
+      campus: "六甲台第2",
+      position: { lat: 34.7, lng: 135.2 },
+      timetableUrl: "https://example.com",
+      note: "test",
+      schedule: {
+        weekday: ["05:00", "23:50", "24:15"],
+        weekend: ["05:30", "24:30"],
+        saturday: ["05:20", "24:20"],
+        holiday: ["05:30", "24:30"]
+      }
+    };
+
+    const beforeMidnight = getUpcomingDepartures(
+      stop,
+      new Date("2026-06-08T23:59:00+09:00"),
+      1
+    );
+    const afterMidnight = getUpcomingDepartures(
+      stop,
+      new Date("2026-06-09T00:05:00+09:00"),
+      1
+    );
+
+    expect(beforeMidnight[0].time).toBe("00:15");
+    expect(beforeMidnight[0].isNextDay).toBe(true);
+    expect(afterMidnight[0].time).toBe("00:15");
+    expect(afterMidnight[0].minutesUntil).toBe(10);
   });
 
   it("rolls over to next-day departures after the last service", () => {
