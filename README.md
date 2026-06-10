@@ -15,7 +15,7 @@
 - 施設の選択と外部地図リンク
 - 現在地表示と徒歩ルート案内、音声案内、ルート逸脱時の再検索
 - 神戸市バス、JR、阪急電鉄、阪神電鉄、神戸市営地下鉄、ポートライナーの最寄り交通カード
-- キャンパス最寄りのバス停の目安時刻表示と、駅の方面別公式時刻表リンク
+- キャンパス最寄りのバス停の目安時刻表示と、月次更新の駅方面別時刻表
 - Google Maps APIキー未設定時のフォールバック地図
 - Gitで管理する静的施設データ
 - GitHub Issueによる情報修正の受付
@@ -40,7 +40,7 @@ npm run dev
 ```
 
 同梱した静的データとフォールバック地図だけで動作します。ブラウザで`http://localhost:4321`を開いてください。
-交通カードのバス発車時刻は目安です。電車の公式時刻は再利用条件を確認できるまでアプリ内に転載せず、方面別の公式時刻表リンクで確認する設計にしています。
+交通カードのバス発車時刻は目安です。電車は生成済みの月次時刻表データがある方面だけアプリ内に表示し、未取得の方面は公式時刻表リンクへ誘導します。
 
 ## 環境変数
 
@@ -53,7 +53,7 @@ Google Mapsを表示する場合だけ、`.env.example`を`.env`へコピーし�
 
 ## データ更新
 
-公式地図番号に対応する座標は[`src/data/officialFacilities.ts`](src/data/officialFacilities.ts)で直接管理しています。変更後は`npm run check`を実行してください。データの出典と取り扱いは[`data/README.md`](data/README.md)を参照してください。
+公式地図番号に対応する座標は[`src/data/officialFacilities.ts`](src/data/officialFacilities.ts)で直接管理しています。鉄道時刻表は`npm run scrape:train-timetables`で[`src/data/generated/trainTimetables.ts`](src/data/generated/trainTimetables.ts)を生成します。変更後は`npm run check`を実行してください。データの出典と取り扱いは[`data/README.md`](data/README.md)を参照してください。
 
 ## 検証
 

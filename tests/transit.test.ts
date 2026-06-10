@@ -3,6 +3,7 @@ import { transitStops } from "../src/data/transit";
 import {
   getNearestTransitStops,
   getTransitDirections,
+  getTransitServiceDay,
   getTransitTimetableLinks,
   getUpcomingDepartures,
   type TransitOperator,
@@ -48,7 +49,7 @@ describe("transit helpers", () => {
     );
 
     expect(departures).toHaveLength(2);
-    expect(departures[0].direction).toBe("大阪梅田方面 / 神戸三宮方面");
+    expect(departures[0].direction).toBe("大阪梅田・西宮北口方面 / 神戸三宮・新開地方面");
     expect(departures[0].minutesUntil).toBeGreaterThanOrEqual(0);
     expect(departures[1].minutesUntil).toBeGreaterThan(departures[0].minutesUntil);
   });
@@ -77,16 +78,16 @@ describe("transit helpers", () => {
     const stop = transitStops.find((candidate) => candidate.id === "hankyu-rokko");
     expect(stop).toBeDefined();
 
-    const osakaLinks = getTransitTimetableLinks(stop!, "大阪梅田方面");
-    const sannomiyaLinks = getTransitTimetableLinks(stop!, "神戸三宮方面");
+    const osakaLinks = getTransitTimetableLinks(stop!, "大阪梅田・西宮北口方面");
+    const sannomiyaLinks = getTransitTimetableLinks(stop!, "神戸三宮・新開地方面");
 
     expect(osakaLinks.map((link) => link.label)).toEqual([
-      "大阪梅田方面 平日",
-      "大阪梅田方面 土休日"
+      "大阪梅田・西宮北口方面 平日",
+      "大阪梅田・西宮北口方面 土休日"
     ]);
     expect(sannomiyaLinks.map((link) => link.label)).toEqual([
-      "神戸三宮方面 平日",
-      "神戸三宮方面 土休日"
+      "神戸三宮・新開地方面 平日",
+      "神戸三宮・新開地方面 土休日"
     ]);
   });
 
@@ -124,11 +125,15 @@ describe("transit helpers", () => {
       directionSchedules: {
         東方面: {
           weekday: ["09:05"],
-          weekend: ["09:15"]
+          weekend: ["09:15"],
+          saturday: ["09:17"],
+          holiday: ["09:19"]
         },
         西方面: {
           weekday: ["09:20"],
-          weekend: ["09:30"]
+          weekend: ["09:30"],
+          saturday: ["09:32"],
+          holiday: ["09:34"]
         }
       }
     };
@@ -148,6 +153,48 @@ describe("transit helpers", () => {
 
     expect(eastDepartures[0].time).toBe("09:05");
     expect(westDepartures[0].time).toBe("09:20");
+  });
+
+  it("distinguishes Saturday from Sunday and holiday train schedules", () => {
+    expect(getTransitServiceDay(new Date("2026-06-06T09:00:00+09:00"))).toBe(
+      "saturday"
+    );
+    expect(getTransitServiceDay(new Date("2026-06-07T09:00:00+09:00"))).toBe(
+      "holiday"
+    );
+
+    const stop: TransitStop = {
+      id: "test-weekend-station",
+      name: "週末駅",
+      mode: "train",
+      operator: "阪急電鉄",
+      line: "テスト線",
+      direction: "東方面",
+      campus: "六甲台第2",
+      position: { lat: 34.7, lng: 135.2 },
+      timetableUrl: "https://example.com",
+      note: "test",
+      schedule: {
+        weekday: ["09:05"],
+        weekend: ["09:20"],
+        saturday: ["09:10"],
+        holiday: ["09:30"]
+      }
+    };
+
+    const saturdayDepartures = getUpcomingDepartures(
+      stop,
+      new Date("2026-06-06T09:00:00+09:00"),
+      1
+    );
+    const holidayDepartures = getUpcomingDepartures(
+      stop,
+      new Date("2026-06-07T09:00:00+09:00"),
+      1
+    );
+
+    expect(saturdayDepartures[0].time).toBe("09:10");
+    expect(holidayDepartures[0].time).toBe("09:30");
   });
 
   it("rolls over to next-day departures after the last service", () => {

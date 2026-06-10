@@ -1,5 +1,6 @@
 import type { CampusName } from "../lib/types";
 import type { TransitStop } from "../lib/transit";
+import { generatedTrainTimetables } from "./generated/trainTimetables";
 
 const toMinutes = (time: string) => {
   const [hour, minute] = time.split(":").map(Number);
@@ -153,6 +154,8 @@ const campusPriority: Record<CampusName, string[]> = {
   その他: ["portliner-minatojima", "jr-rokkomichi"]
 };
 
+const trainDirectionSchedules = (stopId: string) => generatedTrainTimetables.stops[stopId];
+
 const transitStopSeed = [
   {
     id: "citybus-shindai-honbu-kogakubu",
@@ -269,8 +272,9 @@ const transitStopSeed = [
         url: "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=0&MD=3"
       }
     ],
-    note: "JRおでかけネットで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: jrWeekday, weekend: jrWeekend }
+    note: "月次取得データとJRおでかけネットのリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: jrWeekday, weekend: jrWeekend },
+    directionSchedules: trainDirectionSchedules("jr-rokkomichi")
   },
   {
     id: "hankyu-rokko",
@@ -278,34 +282,35 @@ const transitStopSeed = [
     mode: "train",
     operator: "阪急電鉄",
     line: "神戸線",
-    direction: "大阪梅田方面 / 神戸三宮方面",
+    direction: "大阪梅田・西宮北口方面 / 神戸三宮・新開地方面",
     campus: "六甲台第1",
     position: { lat: 34.71968, lng: 135.23372 },
     timetableUrl: "https://www.hankyu.co.jp/station/rokko.html",
     timetableLinks: [
       {
-        label: "大阪梅田方面 平日",
-        direction: "大阪梅田方面",
+        label: "大阪梅田・西宮北口方面 平日",
+        direction: "大阪梅田・西宮北口方面",
         url: "https://www.hankyu.co.jp/station/html/HK-13_ko_1_w.html"
       },
       {
-        label: "大阪梅田方面 土休日",
-        direction: "大阪梅田方面",
+        label: "大阪梅田・西宮北口方面 土休日",
+        direction: "大阪梅田・西宮北口方面",
         url: "https://www.hankyu.co.jp/station/html/HK-13_ko_1_h.html"
       },
       {
-        label: "神戸三宮方面 平日",
-        direction: "神戸三宮方面",
+        label: "神戸三宮・新開地方面 平日",
+        direction: "神戸三宮・新開地方面",
         url: "https://www.hankyu.co.jp/station/html/HK-13_ko_2_w.html"
       },
       {
-        label: "神戸三宮方面 土休日",
-        direction: "神戸三宮方面",
+        label: "神戸三宮・新開地方面 土休日",
+        direction: "神戸三宮・新開地方面",
         url: "https://www.hankyu.co.jp/station/html/HK-13_ko_2_h.html"
       }
     ],
-    note: "阪急電鉄の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: hankyuWeekday, weekend: hankyuWeekend }
+    note: "月次取得データと阪急電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: hankyuWeekday, weekend: hankyuWeekend },
+    directionSchedules: trainDirectionSchedules("hankyu-rokko")
   },
   {
     id: "hanshin-mikage",
@@ -313,7 +318,7 @@ const transitStopSeed = [
     mode: "train",
     operator: "阪神電鉄",
     line: "阪神本線",
-    direction: "大阪梅田方面 / 神戸三宮方面",
+    direction: "大阪梅田・尼崎方面 / 高速神戸・山陽姫路方面",
     campus: "六甲台第2",
     position: { lat: 34.71471, lng: 135.2555 },
     timetableUrl: "https://www.hanshin.co.jp/station/mikage.html",
@@ -323,8 +328,9 @@ const transitStopSeed = [
         url: "https://www.hanshin.co.jp/station/mikage.html"
       }
     ],
-    note: "阪神電鉄の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend }
+    note: "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend },
+    directionSchedules: trainDirectionSchedules("hanshin-mikage")
   },
   {
     id: "hanshin-fukae",
@@ -332,7 +338,7 @@ const transitStopSeed = [
     mode: "train",
     operator: "阪神電鉄",
     line: "阪神本線",
-    direction: "大阪梅田方面 / 神戸三宮方面",
+    direction: "大阪梅田・尼崎方面 / 高速神戸・御影方面",
     campus: "深江",
     position: { lat: 34.72252, lng: 135.29184 },
     timetableUrl: "https://www.hanshin.co.jp/station/fukae.html",
@@ -342,8 +348,9 @@ const transitStopSeed = [
         url: "https://www.hanshin.co.jp/station/fukae.html"
       }
     ],
-    note: "阪神電鉄の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend }
+    note: "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend },
+    directionSchedules: trainDirectionSchedules("hanshin-fukae")
   },
   {
     id: "subway-myodani",
@@ -351,7 +358,7 @@ const transitStopSeed = [
     mode: "train",
     operator: "神戸市営地下鉄",
     line: "西神・山手線",
-    direction: "三宮・新神戸・谷上方面 / 西神中央方面",
+    direction: "谷上・新神戸方面 / 西神中央方面",
     campus: "名谷",
     position: { lat: 34.67919, lng: 135.09443 },
     timetableUrl: "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/",
@@ -361,8 +368,9 @@ const transitStopSeed = [
         url: "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/"
       }
     ],
-    note: "神戸市交通局の駅時刻表で最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: subwayWeekday, weekend: subwayWeekend }
+    note: "月次取得データと神戸市交通局の駅時刻表リンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: subwayWeekday, weekend: subwayWeekend },
+    directionSchedules: trainDirectionSchedules("subway-myodani")
   },
   {
     id: "subway-okurayama",
@@ -370,7 +378,7 @@ const transitStopSeed = [
     mode: "train",
     operator: "神戸市営地下鉄",
     line: "西神・山手線",
-    direction: "三宮・新神戸・谷上方面 / 西神中央方面",
+    direction: "谷上・新神戸方面 / 西神中央方面",
     campus: "楠",
     position: { lat: 34.68404, lng: 135.1741 },
     timetableUrl: "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/",
@@ -380,8 +388,9 @@ const transitStopSeed = [
         url: "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/"
       }
     ],
-    note: "楠キャンパスは大倉山駅から徒歩圏です。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: subwayWeekday, weekend: subwayWeekend }
+    note: "楠キャンパスは大倉山駅から徒歩圏です。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: subwayWeekday, weekend: subwayWeekend },
+    directionSchedules: trainDirectionSchedules("subway-okurayama")
   },
   {
     id: "portliner-minatojima",
@@ -399,8 +408,9 @@ const transitStopSeed = [
         url: "https://www.knt-liner.co.jp/station/804/"
       }
     ],
-    note: "神戸新交通の駅ページで最新時刻表を確認できます。アプリ内には公式時刻を転載していません。",
-    schedule: { weekday: portlinerWeekday, weekend: portlinerWeekend }
+    note: "月次取得データと神戸新交通の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    schedule: { weekday: portlinerWeekday, weekend: portlinerWeekend },
+    directionSchedules: trainDirectionSchedules("portliner-minatojima")
   }
 ] satisfies TransitStop[];
 

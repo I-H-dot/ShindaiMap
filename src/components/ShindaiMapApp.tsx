@@ -225,7 +225,8 @@ const TransitDepartureCard = ({
       : directions[0] || stop.direction;
   const departures = getUpcomingDepartures(stop, now, 2, activeDirection);
   const icon = stop.mode === "bus" ? faBus : faTrain;
-  const canShowDepartures = stop.mode !== "train" || Boolean(stop.directionSchedules);
+  const canShowDepartures =
+    stop.mode !== "train" || Boolean(stop.directionSchedules?.[activeDirection]);
   const officialLinks = getTransitTimetableLinks(stop, activeDirection);
   const primaryOfficialLink = officialLinks[0] || {
     label: "公式時刻表",
@@ -299,7 +300,7 @@ const TransitDepartureCard = ({
       ) : (
         <div className="transit-official-only">
           <strong>{activeDirection}の公式時刻表で確認してください</strong>
-          <span>鉄道の発車時刻は公式サイトの再利用条件を確認できるまで、アプリ内に転載しません。</span>
+          <span>鉄道の発車時刻は月次取得データがある方面だけアプリ内に表示します。</span>
           <div className="transit-official-link-list">
             {officialLinks.map((link) => (
               <a key={`${stop.id}-${link.label}`} href={link.url} target="_blank" rel="noreferrer">
@@ -341,7 +342,8 @@ const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) =
       : directions[0] || stop.direction;
   const departures = getUpcomingDepartures(stop, now, 2, activeDirection);
   const icon = stop.mode === "bus" ? faBus : faTrain;
-  const canShowDepartures = stop.mode !== "train" || Boolean(stop.directionSchedules);
+  const canShowDepartures =
+    stop.mode !== "train" || Boolean(stop.directionSchedules?.[activeDirection]);
   const officialLinks = getTransitTimetableLinks(stop, activeDirection);
   const primaryOfficialLink = officialLinks[0] || {
     label: "公式時刻表",
@@ -392,7 +394,7 @@ const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) =
         </div>
       ) : (
         <p className="campus-transit-official-only">
-          {activeDirection}の時刻は公式時刻表で確認してください。
+          {activeDirection}の取得済み時刻がないため、公式時刻表で確認してください。
         </p>
       )}
       <a href={primaryOfficialLink.url} target="_blank" rel="noreferrer">

@@ -11,6 +11,22 @@ export type TransitOperator =
   | "神戸市営地下鉄"
   | "ポートライナー";
 
+export type TransitServiceDay = "weekday" | "saturday" | "holiday";
+
+export interface TransitSchedule {
+  weekday: string[];
+  weekend: string[];
+  saturday?: string[];
+  holiday?: string[];
+}
+
+export interface GeneratedTrainTimetables {
+  updatedAt: string;
+  source: string;
+  sourceUrlPattern: string;
+  stops: Partial<Record<string, Record<string, TransitSchedule>>>;
+}
+
 export interface TransitStop {
   id: string;
   name: string;
@@ -27,17 +43,8 @@ export interface TransitStop {
     direction?: string;
   }>;
   note: string;
-  schedule: {
-    weekday: string[];
-    weekend: string[];
-  };
-  directionSchedules?: Record<
-    string,
-    {
-      weekday: string[];
-      weekend: string[];
-    }
-  >;
+  schedule: TransitSchedule;
+  directionSchedules?: Record<string, TransitSchedule>;
 }
 
 export interface TransitDeparture {
@@ -84,9 +91,17 @@ const formatClock = (minutes: number) => {
   return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
 };
 
-export const getTransitServiceDay = (date: Date) => {
+export const getTransitServiceDay = (date: Date): TransitServiceDay => {
   const { weekday } = getTransitDateParts(date);
-  return weekday === "Sat" || weekday === "Sun" ? "weekend" : "weekday";
+  if (weekday === "Sat") return "saturday";
+  if (weekday === "Sun") return "holiday";
+  return "weekday";
+};
+
+const getScheduleTimes = (schedule: TransitSchedule, serviceDay: TransitServiceDay) => {
+  if (serviceDay === "saturday") return schedule.saturday || schedule.weekend;
+  if (serviceDay === "holiday") return schedule.holiday || schedule.weekend;
+  return schedule.weekday;
 };
 
 export const getTransitDirections = (stop: TransitStop) =>
@@ -119,8 +134,8 @@ export const getUpcomingDepartures = (
   const nextDay = getTransitServiceDay(tomorrowDate);
   const { minutes: nowMinutes } = getTransitDateParts(date);
   const schedule = stop.directionSchedules?.[direction] || stop.schedule;
-  const today = schedule[serviceDay].map((time) => toMinutes(time));
-  const tomorrow = schedule[nextDay].map((time) => toMinutes(time) + 1440);
+  const today = getScheduleTimes(schedule, serviceDay).map((time) => toMinutes(time));
+  const tomorrow = getScheduleTimes(schedule, nextDay).map((time) => toMinutes(time) + 1440);
 
   return [...today, ...tomorrow]
     .filter((minutes) => minutes >= nowMinutes)
