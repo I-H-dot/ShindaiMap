@@ -15,12 +15,8 @@ concurrency:
 
 jobs:
   update:
-    if: ${{ vars.ENABLE_TRAIN_TIMETABLE_SCRAPE == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
-    env:
-      TRAIN_TIMETABLE_REUSE_CONFIRMED: ${{ vars.TRAIN_TIMETABLE_REUSE_CONFIRMED }}
 
     steps:
       - name: Checkout

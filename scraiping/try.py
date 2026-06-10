@@ -2,15 +2,13 @@
 """Fetch and normalize monthly train timetables for ShindaiMap.
 
 The scraper targets the small set of train stations used by the app and writes
-TypeScript data that can be imported at build time. Live scraping is gated by an
-explicit confirmation flag because timetable pages may have reuse restrictions.
+TypeScript data that can be imported at build time.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 import time
@@ -74,6 +72,10 @@ USER_AGENT = (
     "ShindaiMap monthly timetable updater "
     "(+https://github.com/I-H-dot/ShindaiMap)"
 )
+
+
+def progress(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
 
 
 @dataclass(frozen=True)
@@ -283,26 +285,49 @@ def fetch_html(url: str, timeout: int) -> str:
 
 def build_payload(delay_seconds: float, timeout: int) -> dict[str, object]:
     stops: dict[str, dict[str, dict[str, list[str]]]] = {}
+    total_requests = sum(len(stop.directions) * len(SERVICE_DAYS) for stop in TRAIN_TARGETS)
+    completed_requests = 0
+    started_at = time.monotonic()
 
+    progress(
+        f"時刻表取得を開始します: {len(TRAIN_TARGETS)}駅 / "
+        f"{sum(len(stop.directions) for stop in TRAIN_TARGETS)}方面 / {total_requests}ページ"
+    )
     for stop in TRAIN_TARGETS:
-        print(f"探索対象駅: {stop.station_name}", file=sys.stderr)
+        progress(f"探索対象駅: {stop.station_name} ({stop.app_stop_id})")
         stop_payload: dict[str, dict[str, list[str]]] = {}
 
         for direction in stop.directions:
             schedule: dict[str, list[str]] = {}
             for service_key, service_label, day_kind in SERVICE_DAYS:
                 url = timetable_url(stop.station_id, direction.direction_id, day_kind)
-                html = fetch_html(url, timeout=timeout)
-                times = parse_timetable_times(html)
+                request_number = completed_requests + 1
+                progress(
+                    f"[{request_number}/{total_requests}] 取得開始: "
+                    f"{stop.station_name} / {direction.app_label} / {service_label}"
+                )
+                try:
+                    html = fetch_html(url, timeout=timeout)
+                    times = parse_timetable_times(html)
+                except Exception as exc:
+                    progress(
+                        f"[{request_number}/{total_requests}] 取得失敗: "
+                        f"{stop.station_name} / {direction.app_label} / {service_label} "
+                        f"({exc})"
+                    )
+                    raise
                 if not times:
                     raise RuntimeError(
                         f"時刻を取得できませんでした: {stop.station_name} "
                         f"{direction.app_label} {service_label} {url}"
                     )
                 schedule[service_key] = times
-                print(
-                    f"  {direction.app_label} {service_label}: {len(times)}件",
-                    file=sys.stderr,
+                completed_requests += 1
+                elapsed = time.monotonic() - started_at
+                progress(
+                    f"[{completed_requests}/{total_requests}] 取得完了: "
+                    f"{stop.station_name} / {direction.app_label} / {service_label} "
+                    f"{len(times)}件 ({elapsed:.1f}s)"
                 )
                 time.sleep(delay_seconds)
 
@@ -311,7 +336,9 @@ def build_payload(delay_seconds: float, timeout: int) -> dict[str, object]:
             stop_payload[direction.app_label] = schedule
 
         stops[stop.app_stop_id] = stop_payload
+        progress(f"駅の取得完了: {stop.station_name}")
 
+    progress(f"すべての時刻表取得が完了しました ({time.monotonic() - started_at:.1f}s)")
     return {
         "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": SOURCE_NAME,
@@ -330,20 +357,6 @@ def render_typescript(payload: dict[str, object]) -> str:
     )
 
 
-def require_reuse_confirmation(args: argparse.Namespace) -> None:
-    confirmed = (
-        args.confirm_reuse_allowed
-        or os.environ.get("TRAIN_TIMETABLE_REUSE_CONFIRMED") == "true"
-    )
-    if confirmed:
-        return
-
-    raise SystemExit(
-        "Live timetable scraping is disabled until reuse permission is confirmed. "
-        "Set TRAIN_TIMETABLE_REUSE_CONFIRMED=true or pass --confirm-reuse-allowed."
-    )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -354,27 +367,24 @@ def main() -> int:
     parser.add_argument("--delay", type=float, default=0.75, help="Delay between requests.")
     parser.add_argument("--timeout", type=int, default=15, help="HTTP timeout seconds.")
     parser.add_argument(
-        "--confirm-reuse-allowed",
-        action="store_true",
-        help="Confirm that the selected timetable source can be reused in this app.",
-    )
-    parser.add_argument(
         "--html-file",
         help="Parse one saved timetable HTML file and print normalized times as JSON.",
     )
     args = parser.parse_args()
 
     if args.html_file:
+        progress(f"保存済みHTMLを解析します: {args.html_file}")
         html = Path(args.html_file).read_text(encoding="utf-8")
         print(json.dumps(parse_timetable_times(html), ensure_ascii=False, indent=2))
+        progress("保存済みHTMLの解析が完了しました")
         return 0
 
-    require_reuse_confirmation(args)
     payload = build_payload(delay_seconds=args.delay, timeout=args.timeout)
     output_path = Path(args.output)
+    progress(f"生成ファイルを書き込みます: {output_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(render_typescript(payload), encoding="utf-8")
-    print(f"Wrote {output_path}", file=sys.stderr)
+    progress(f"生成完了: {output_path}")
     return 0
 
 
