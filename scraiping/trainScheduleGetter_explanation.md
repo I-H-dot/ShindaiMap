@@ -6,8 +6,10 @@
 
 ## 全体像
 
-- `TRAIN_TARGETS` に、取得対象の駅と方面を定義する。
-- `SERVICE_DAYS` に、平日・土曜・日曜祝日の取得種別を定義する。
+- `STATION_IDS`、`DIRECTION_IDS`、`SERVICE_DAY_IDS` に、Yahoo!路線情報で使うIDを集約する。
+- `TRAIN_TARGETS` に、取得対象の駅と方面を `StopTarget` / `DirectionTarget` として定義する。
+- `SERVICE_DAYS` に、平日・土曜・日曜祝日の取得種別を `ServiceDayTarget` として定義する。
+- `validate_train_targets()` で、`STATION_IDS` にある駅が `TRAIN_TARGETS` に全て含まれているか検証する。
 - 通常実行では、駅、方面、曜日種別の組み合わせごとにYahoo!路線情報の印刷用時刻表ページを取得する。
 - 取得したHTMLは、まずNext.jsの `__NEXT_DATA__` から時刻を抽出する。
 - `__NEXT_DATA__` が使えない場合は、`TimetableHTMLParser` でHTML表を直接解析する。
@@ -33,6 +35,23 @@ classDiagram
         +tuple~DirectionTarget~ directions
     }
 
+    class ServiceDayTarget {
+        <<dataclass_frozen>>
+        +str key
+        +str label
+        +int day_kind
+    }
+
+    class ScrapeProgress {
+        <<dataclass>>
+        +int total_requests
+        +int completed_requests
+        +float started_at
+        +int next_request_number
+        +float elapsed_seconds
+        +mark_completed()
+    }
+
     class HTMLParser {
         <<standard_library>>
     }
@@ -56,27 +75,38 @@ classDiagram
         +list~StopTarget~ values
     }
 
+    class SERVICE_DAYS {
+        <<constant_tuple>>
+        +list~ServiceDayTarget~ values
+    }
+
     HTMLParser <|-- TimetableHTMLParser
     StopTarget "1" *-- "0..*" DirectionTarget : directions
     TRAIN_TARGETS o-- StopTarget : contains
+    SERVICE_DAYS o-- ServiceDayTarget : contains
 ```
 
 ## 通常実行時の処理フロー
 
 ```mermaid
 flowchart TD
-    A["python scraiping/trainScheduleGetter.py"] --> B["main(): argparseで引数を解析"]
-    B --> C{"--html-file の指定がある?"}
+    A["python scraiping/trainScheduleGetter.py"] --> B["main()"]
+    B --> C0["parse_args(): argparseで引数を解析"]
+    C0 --> C{"--html-file の指定がある?"}
 
-    C -- "Yes" --> D["指定HTMLファイルを読み込む"]
-    D --> E["parse_timetable_times(html)"]
+    C -- "Yes" --> D["run_html_file_mode()"]
+    D --> D2["指定HTMLファイルを読み込む"]
+    D2 --> E["parse_timetable_times(html)"]
     E --> F["正規化済み時刻リストをJSONで標準出力"]
     F --> Z["終了"]
 
-    C -- "No" --> G["build_payload(delay, timeout)"]
-    G --> H["TRAIN_TARGETS の各駅を処理"]
-    H --> I["駅に紐づく各方面を処理"]
-    I --> J["SERVICE_DAYS の各曜日種別を処理"]
+    C -- "No" --> G0["run_generation_mode()"]
+    G0 --> G["build_payload(delay, timeout)"]
+    G --> G2["validate_train_targets()"]
+    G2 --> G3["ScrapeProgressを作成"]
+    G3 --> H["fetch_stop_payload(): TRAIN_TARGETS の各駅を処理"]
+    H --> I["fetch_direction_schedule(): 駅に紐づく各方面を処理"]
+    I --> J["fetch_service_day_times(): SERVICE_DAYS の各曜日種別を処理"]
     J --> K["timetable_url() で取得URLを生成"]
     K --> L["fetch_html() でYahoo!路線情報のHTMLを取得"]
     L --> M["parse_timetable_times() で時刻を抽出"]
@@ -125,16 +155,26 @@ flowchart TD
 
 | 関数 | 役割 |
 | --- | --- |
-| `progress()` | 進捗メッセージを標準エラーに出す。 |
+| `log_progress()` | 進捗メッセージを標準エラーに出す。 |
+| `make_direction_target()` | アプリ表示用方面ラベルとYahoo方面IDを紐づける。 |
+| `make_stop_target()` | アプリ内停留所ID、駅名、方面一覧から取得対象駅を作る。 |
+| `validate_train_targets()` | `STATION_IDS` と `TRAIN_TARGETS` の不足・重複を検出する。 |
 | `to_clock()` | 時・分の数値を `HH:MM` 形式にする。 |
+| `minutes_since_midnight()` | `HH:MM` をソート用の分数に変換する。 |
 | `sort_unique_times()` | 時刻文字列の重複を消し、分換算で昇順に並べる。 |
 | `parse_next_data_times()` | HTML内のNext.js JSONから時刻表を抽出する。 |
 | `parse_table_times()` | HTML表を `TimetableHTMLParser` で解析する。 |
 | `parse_timetable_times()` | Next.js JSON解析を優先し、失敗時にHTML表解析へフォールバックする。 |
 | `timetable_url()` | 駅ID、方面ID、曜日種別からYahoo!路線情報の印刷用URLを組み立てる。 |
 | `fetch_html()` | User-AgentなどのHTTPヘッダーを付けてHTMLを取得する。 |
+| `fetch_service_day_times()` | 1駅・1方面・1曜日種別のHTML取得と解析を行う。 |
+| `fetch_direction_schedule()` | 1駅・1方面について平日・土曜・日曜祝日を取得する。 |
+| `fetch_stop_payload()` | 1駅に紐づく全方面の時刻表を取得する。 |
 | `build_payload()` | 全駅・全方面・全曜日種別を取得して、出力用payloadを作る。 |
 | `render_typescript()` | payloadをTypeScriptの `generatedTrainTimetables` 定数へ整形する。 |
+| `parse_args()` | CLI引数を解析する。 |
+| `run_html_file_mode()` | 保存済みHTMLの単体解析モードを実行する。 |
+| `run_generation_mode()` | ライブ取得してTypeScript出力する通常モードを実行する。 |
 | `main()` | CLI引数を処理し、HTML単体解析またはTypeScript生成を実行する。 |
 
 ## 出力データ構造
