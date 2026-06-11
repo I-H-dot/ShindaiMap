@@ -39,7 +39,8 @@ REQUEST_HEADERS = {
     "Accept-Language": "ja,en;q=0.8",
 }
 DEFAULT_OUTPUT_PATH = (
-    Path(__file__).resolve().parents[1] / "src/data/generated/trainTimetables.ts"
+    Path(__file__).resolve().parents[1] /
+    "src/data/generated/trainTimetables.ts"
 )
 NEXT_DATA_SCRIPT_RE = re.compile(
     r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
