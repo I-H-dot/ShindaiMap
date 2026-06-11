@@ -130,6 +130,40 @@ TRAIN_TARGETS: tuple[StopTarget, ...] = (
         ),
     ),
     StopTarget(
+        app_stop_id="hanshin-shinzaike",
+        station_name="新在家",
+        station_id=stationID["新在家"],
+        directions=(
+            DirectionTarget("大阪梅田・尼崎方面", directionID["大阪梅田・尼崎方面"]),
+            DirectionTarget("高速神戸・神戸三宮方面", directionID["高速神戸・神戸三宮方面"]),
+        ),
+    ),
+    StopTarget(
+        app_stop_id="kobekosoku-kosokukobe",
+        station_name="高速神戸",
+        station_id=stationID["高速神戸"],
+        directions=(
+            DirectionTarget(
+                "梅田(阪神)・神戸三宮(阪神)方面",
+                directionID["梅田(阪神)・神戸三宮(阪神)方面"],
+            ),
+            DirectionTarget(
+                "梅田(阪急)・神戸三宮(阪急)方面",
+                directionID["梅田(阪急)・神戸三宮(阪急)方面"],
+            ),
+            DirectionTarget("山陽姫路・新開地方面", directionID["山陽姫路・新開地方面"]),
+        ),
+    ),
+    StopTarget(
+        app_stop_id="jr-kobe",
+        station_name="神戸",
+        station_id=stationID["神戸"],
+        directions=(
+            DirectionTarget("尼崎・大阪・京都方面", directionID["米原・京都方面"]),
+            DirectionTarget("西明石・網干方面", directionID["西明石・網干方面"]),
+        ),
+    ),
+    StopTarget(
         app_stop_id="subway-myodani",
         station_name="名谷",
         station_id=stationID["名谷"],
@@ -156,6 +190,27 @@ TRAIN_TARGETS: tuple[StopTarget, ...] = (
             DirectionTarget("神戸空港方面", directionID["神戸空港方面"]),
         ),
     ),
+    StopTarget(
+        app_stop_id="portliner-keisan-kagaku-center",
+        station_name="計算科学センター",
+        station_id=stationID["計算科学センター"],
+        directions=(
+            DirectionTarget("三宮方面", directionID["三宮方面"]),
+            DirectionTarget("神戸空港方面", directionID["神戸空港方面"]),
+        ),
+    ),
+    StopTarget(
+        app_stop_id="portliner-iryo-center",
+        station_name="医療センター",
+        station_id=stationID["医療センター"],
+        directions=(
+            DirectionTarget("三宮方面", directionID["三宮方面"]),
+            DirectionTarget(
+                "神戸空港・計算科学センター方面",
+                directionID["神戸空港・計算科学センター方面"],
+            ),
+        ),
+    ),
 )
 
 SERVICE_DAYS = (
@@ -163,6 +218,16 @@ SERVICE_DAYS = (
     ("saturday", "土曜", dayOfTheWeek["土曜"]),
     ("holiday", "日曜・祝日", dayOfTheWeek["日曜・祝日"]),
 )
+
+
+def validate_train_targets() -> None:
+    target_station_names = {target.station_name for target in TRAIN_TARGETS}
+    missing_station_names = sorted(set(stationID) - target_station_names)
+    if missing_station_names:
+        raise RuntimeError(
+            "TRAIN_TARGETS に未登録の stationID 駅があります: "
+            + ", ".join(missing_station_names)
+        )
 
 
 class TimetableHTMLParser(HTMLParser):
@@ -290,6 +355,7 @@ def fetch_html(url: str, timeout: int) -> str:
 
 
 def build_payload(delay_seconds: float, timeout: int) -> dict[str, object]:
+    validate_train_targets()
     stops: dict[str, dict[str, dict[str, list[str]]]] = {}
     total_requests = sum(len(stop.directions) * len(SERVICE_DAYS) for stop in TRAIN_TARGETS)
     completed_requests = 0
