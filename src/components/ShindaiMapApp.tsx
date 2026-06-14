@@ -488,8 +488,7 @@ const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) =
   );
 };
 
-const getCampusBounds = (facilities: Facility[]) => {
-  const positions = facilities.map((facility) => facility.position);
+const getCoordinateBounds = (positions: LatLng[]) => {
   const lats = positions.map((position) => position.lat);
   const lngs = positions.map((position) => position.lng);
   const minLat = Math.min(...lats);
@@ -507,18 +506,27 @@ const getCampusBounds = (facilities: Facility[]) => {
   };
 };
 
-const getFallbackPosition = (facility: Facility, facilities: Facility[]) => {
-  const bounds = getCampusBounds(facilities);
+const getFallbackPointPosition = (position: LatLng, referencePositions: LatLng[]) => {
+  const bounds = getCoordinateBounds(
+    referencePositions.length > 0 ? referencePositions : [position]
+  );
   const left =
-    ((facility.position.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 86 + 7;
+    ((position.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 86 + 7;
   const top =
-    (1 - (facility.position.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * 82 +
+    (1 - (position.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * 82 +
     9;
 
   return {
     left: `${Math.max(4, Math.min(96, left))}%`,
     top: `${Math.max(4, Math.min(96, top))}%`
   };
+};
+
+const getFallbackPosition = (facility: Facility, facilities: Facility[]) => {
+  return getFallbackPointPosition(
+    facility.position,
+    facilities.map((item) => item.position)
+  );
 };
 
 const isCampusViewportFacility = (facility: Facility) => {
@@ -548,6 +556,7 @@ export default function ShindaiMapApp({
   const [navigationHeading, setNavigationHeading] = useState<number | null>(null);
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [transitPosition, setTransitPosition] = useState<LatLng | null>(null);
+  const [currentLocationVisible, setCurrentLocationVisible] = useState(false);
   const [transitStatusText, setTransitStatusText] =
     useState("現在地から最寄りを確認中");
   const [desktopTransitMode, setDesktopTransitMode] = useState<TransitMode>("bus");
@@ -1012,44 +1021,21 @@ export default function ShindaiMapApp({
       return;
     }
 
+    setMapMessage("現在地を取得中");
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const currentPosition = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
-        setTransitPosition(currentPosition);
-        setTransitStatusText("現在地から最寄りを表示");
-
-        if (googleMapRef.current && typeof google !== "undefined") {
-          if (!currentLocationMarkerRef.current) {
-            const legacyMaps = getLegacyMapsApi();
-            currentLocationMarkerRef.current = new legacyMaps.Marker({
-              map: googleMapRef.current,
-              position: currentPosition,
-              title: "現在地",
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: "#2563eb",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 4,
-                scale: 10
-              },
-              zIndex: 4
-            });
-          } else {
-            currentLocationMarkerRef.current.setPosition(currentPosition);
-            currentLocationMarkerRef.current.setMap(googleMapRef.current);
-          }
-
-          googleMapRef.current.panTo(currentPosition);
-          googleMapRef.current.setZoom(Math.max(googleMapRef.current.getZoom() || 17, 17));
-          setMapMessage("現在地を表示中");
-          return;
-        }
-
-        setMapMessage("Google Maps読み込み後に現在地を表示できます");
+        const displayedOnGoogleMap = updateCurrentLocationMarker(currentPosition, {
+          panMap: true
+        });
+        setMapMessage(
+          displayedOnGoogleMap
+            ? "現在地を表示中"
+            : "ローカル用地図で現在地を表示中"
+        );
       },
       () => {
         setMapMessage("現在地を取得できませんでした");
@@ -1464,9 +1450,10 @@ export default function ShindaiMapApp({
     options?: { panMap?: boolean }
   ) => {
     setTransitPosition(currentPosition);
+    setCurrentLocationVisible(true);
     setTransitStatusText("現在地から最寄りを表示");
 
-    if (!googleMapRef.current || typeof google === "undefined") return;
+    if (!googleMapRef.current || typeof google === "undefined") return false;
 
     if (!currentLocationMarkerRef.current) {
       const legacyMaps = getLegacyMapsApi();
@@ -1493,7 +1480,20 @@ export default function ShindaiMapApp({
       googleMapRef.current.panTo(currentPosition);
       googleMapRef.current.setZoom(Math.max(googleMapRef.current.getZoom() || 18, 18));
     }
+
+    return true;
   };
+
+  useEffect(() => {
+    if (!googleMapReady || !transitPosition || !currentLocationVisible) return;
+
+    updateCurrentLocationMarker(transitPosition);
+  }, [
+    currentLocationVisible,
+    googleMapReady,
+    transitPosition?.lat,
+    transitPosition?.lng
+  ]);
 
   const extractRouteDetails = (result: google.maps.DirectionsResult) => {
     const route = result.routes[0];
@@ -2012,6 +2012,10 @@ export default function ShindaiMapApp({
       })[0] || null,
     [transitReferencePosition.lat, transitReferencePosition.lng]
   );
+  const fallbackReferencePositions = useMemo(
+    () => mapBoundsFacilities.map((facility) => facility.position),
+    [mapBoundsFacilities]
+  );
   const campusNearestBus = useMemo(
     () =>
       getNearestTransitStops(transitStops, selectedTransitReferencePosition, {
@@ -2426,6 +2430,17 @@ export default function ShindaiMapApp({
               <div className="fallback-empty-state" role="status">
                 <strong>該当する施設がありません</strong>
                 <span>検索語、キャンパス、カテゴリを変更してください。</span>
+              </div>
+            )}
+            {currentLocationVisible && transitPosition && (
+              <div
+                className="fallback-current-location"
+                style={getFallbackPointPosition(transitPosition, fallbackReferencePositions)}
+                role="img"
+                aria-label="現在地"
+                title="現在地"
+              >
+                <span />
               </div>
             )}
           </div>

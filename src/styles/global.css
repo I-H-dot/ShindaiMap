@@ -631,6 +631,29 @@ a {
   height: 17px;
 }
 
+.fallback-current-location {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.16);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.fallback-current-location span {
+  width: 18px;
+  height: 18px;
+  border: 4px solid #fff;
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.34);
+}
+
 .map-locate-button {
   position: absolute;
   bottom: 20px;
