@@ -4,7 +4,7 @@ import sitemap from "@astrojs/sitemap";
 
 const isGitHubActions = process.env.GITHUB_ACTIONS === "true";
 const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "ShindaiMap";
-const repositoryOwner = process.env.GITHUB_REPOSITORY_OWNER || "IshizukaHiroto";
+const repositoryOwner = process.env.GITHUB_REPOSITORY_OWNER || "I-H-dot";
 const isUserSite = repositoryName.toLowerCase() === `${repositoryOwner.toLowerCase()}.github.io`;
 const githubPagesOrigin = `https://${repositoryOwner.toLowerCase()}.github.io`;
 const githubPagesBase = isUserSite ? "/" : `/${repositoryName}`;

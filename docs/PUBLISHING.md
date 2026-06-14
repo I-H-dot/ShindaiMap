@@ -25,7 +25,7 @@
 ```bash
 npm ci
 npm run check
-GITHUB_ACTIONS=true GITHUB_REPOSITORY=IshizukaHiroto/ShindaiMap GITHUB_REPOSITORY_OWNER=IshizukaHiroto npm run build
+GITHUB_ACTIONS=true GITHUB_REPOSITORY=I-H-dot/ShindaiMap GITHUB_REPOSITORY_OWNER=I-H-dot npm run build
 npm audit --audit-level=moderate
 ```
 

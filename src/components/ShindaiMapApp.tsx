@@ -1577,8 +1577,8 @@ export default function ShindaiMapApp({
     ? metersBetween(nearestCampusCenter, selectedFacility.position)
     : 0;
   const feedbackUrl = selectedFacility
-    ? `https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml&title=${encodeURIComponent(`[Data]: ${selectedFacility.name}`)}`
-    : "https://github.com/IshizukaHiroto/ShindaiMap/issues/new?template=facility_report.yml";
+    ? `https://github.com/I-H-dot/ShindaiMap/issues/new?template=facility_report.yml&title=${encodeURIComponent(`[Data]: ${selectedFacility.name}`)}`
+    : "https://github.com/I-H-dot/ShindaiMap/issues/new?template=facility_report.yml";
   const fallbackTransitReferencePosition =
     campus !== "all" ? campusCenters[campus] : campusCenters["六甲台第2"];
   const selectedTransitReferencePosition = selectedFacility

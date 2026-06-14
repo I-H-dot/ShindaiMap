@@ -4,8 +4,8 @@
 
 ## 公開先
 
-- リポジトリ: `https://github.com/IshizukaHiroto/ShindaiMap`
-- サイト: `https://ishizukahiroto.github.io/ShindaiMap/`
+- リポジトリ: `https://github.com/I-H-dot/ShindaiMap`
+- サイト: `https://i-h-dot.github.io/ShindaiMap/`
 - デプロイ元: `main`ブランチ
 - ワークフロー: `.github/workflows/deploy.yml`
 
@@ -25,7 +25,7 @@
 Google Mapsを有効にする場合だけ、Google Cloud Consoleでブラウザー用APIキーを作成し、次の制限を設定してください。
 
 - Application restrictions: Websites
-- Website restriction: `https://ishizukahiroto.github.io/ShindaiMap/*`
+- Website restriction: `https://i-h-dot.github.io/ShindaiMap/*`
 - API restrictions: Maps JavaScript API
 
 設定したキーはGitHubリポジトリの`Settings > Secrets and variables > Actions > Secrets > New repository secret`で、`PUBLIC_GOOGLE_MAPS_API_KEY`という名前のSecretとして登録してください。
@@ -41,8 +41,8 @@ Google Mapsを有効にする場合だけ、Google Cloud Consoleでブラウザ�
 
 ```bash
 GITHUB_ACTIONS=true \
-GITHUB_REPOSITORY=IshizukaHiroto/ShindaiMap \
-GITHUB_REPOSITORY_OWNER=IshizukaHiroto \
+GITHUB_REPOSITORY=I-H-dot/ShindaiMap \
+GITHUB_REPOSITORY_OWNER=I-H-dot \
 npm run build
 ```
 

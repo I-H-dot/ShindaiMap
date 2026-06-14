@@ -1,6 +1,6 @@
 # 神大Map
 
-[![CI](https://github.com/IshizukaHiroto/ShindaiMap/actions/workflows/ci.yml/badge.svg)](https://github.com/IshizukaHiroto/ShindaiMap/actions/workflows/ci.yml)
+[![CI](https://github.com/I-H-dot/ShindaiMap/actions/workflows/ci.yml/badge.svg)](https://github.com/I-H-dot/ShindaiMap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 神戸大学の公式地図番号、教室、図書館、トイレ、休憩場所、ラーニングコモンズ、ATM、ポスト、バス停などを1画面で探すためのWebマップです。
@@ -33,7 +33,7 @@
 必要な環境はNode.js 22以上です。
 
 ```bash
-git clone https://github.com/IshizukaHiroto/ShindaiMap.git
+git clone https://github.com/I-H-dot/ShindaiMap.git
 cd ShindaiMap
 npm ci
 npm run dev
@@ -67,7 +67,7 @@ npm run check
 
 `main`ブランチへプッシュすると、GitHub ActionsがGitHub Pagesへ自動デプロイします。
 
-公開先は`https://ishizukahiroto.github.io/ShindaiMap/`です。初回だけGitHubリポジトリの`Settings > Pages > Build and deployment > Source`で`GitHub Actions`を選択してください。
+公開先は`https://i-h-dot.github.io/ShindaiMap/`です。初回だけGitHubリポジトリの`Settings > Pages > Build and deployment > Source`で`GitHub Actions`を選択してください。
 
 Google Maps APIキーを設定しなくてもフォールバック地図で動作します。公開手順と任意のGoogle Maps設定は[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)を参照してください。
 

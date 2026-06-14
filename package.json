@@ -7,12 +7,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/IshizukaHiroto/ShindaiMap.git"
+    "url": "git+https://github.com/I-H-dot/ShindaiMap.git"
   },
   "bugs": {
-    "url": "https://github.com/IshizukaHiroto/ShindaiMap/issues"
+    "url": "https://github.com/I-H-dot/ShindaiMap/issues"
   },
-  "homepage": "https://github.com/IshizukaHiroto/ShindaiMap#readme",
+  "homepage": "https://github.com/I-H-dot/ShindaiMap#readme",
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1",
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro check && ASTRO_TELEMETRY_DISABLED=1 astro build",
