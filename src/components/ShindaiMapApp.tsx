@@ -98,6 +98,48 @@ interface PointerStartState extends TouchStartState {
   pointerId: number;
 }
 
+type LegacyMarkerOptions = {
+  map: google.maps.Map;
+  position: google.maps.LatLng | google.maps.LatLngLiteral;
+  title: string;
+  icon: google.maps.Icon | google.maps.Symbol;
+  label?: string | google.maps.MarkerLabel;
+  zIndex: number;
+};
+
+type LegacyMarker = google.maps.MVCObject & {
+  setMap(map: google.maps.Map | null): void;
+  setPosition(position: google.maps.LatLng | google.maps.LatLngLiteral): void;
+  setIcon(icon: google.maps.Icon | google.maps.Symbol | string | null): void;
+  setZIndex(zIndex: number | null): void;
+};
+
+type LegacyDirectionsRenderer = google.maps.MVCObject & {
+  setDirections(directions: google.maps.DirectionsResult): void;
+  setMap(map: google.maps.Map | null): void;
+};
+
+type LegacyDirectionsService = {
+  route(
+    request: google.maps.DirectionsRequest,
+    callback: (
+      result: google.maps.DirectionsResult | null,
+      status: google.maps.DirectionsStatus
+    ) => void
+  ): void;
+};
+
+// Keep legacy Maps constructors behind one typed boundary until route rendering moves to Routes API.
+const getLegacyMapsApi = () =>
+  google.maps as unknown as {
+    Marker: new (options: LegacyMarkerOptions) => LegacyMarker;
+    DirectionsRenderer: new (options: {
+      suppressMarkers: boolean;
+      preserveViewport: boolean;
+    }) => LegacyDirectionsRenderer;
+    DirectionsService: new () => LegacyDirectionsService;
+  };
+
 const icons: Record<string, IconDefinition> = {
   accessibility: faUniversalAccess,
   "heart-pulse": faHeartPulse,
@@ -512,10 +554,11 @@ export default function ShindaiMapApp({
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const selectedPanelTouchRef = useRef<TouchStartState | null>(null);
   const selectedPanelPointerRef = useRef<PointerStartState | null>(null);
+  const selectedPanelRef = useRef<HTMLElement | null>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
-  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
-  const markersByIdRef = useRef<Map<string, google.maps.Marker>>(new Map());
-  const currentLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const directionsRendererRef = useRef<LegacyDirectionsRenderer | null>(null);
+  const markersByIdRef = useRef<Map<string, LegacyMarker>>(new Map());
+  const currentLocationMarkerRef = useRef<LegacyMarker | null>(null);
   const navigationWatchIdRef = useRef<number | null>(null);
   const navigationDestinationRef = useRef<Facility | null>(null);
   const navigationRoutePathRef = useRef<LatLng[]>([]);
@@ -525,7 +568,26 @@ export default function ShindaiMapApp({
   const selectedFacilityIdRef = useRef(selectedId);
   const lastRerouteAtRef = useRef(0);
   const lastSpokenInstructionRef = useRef("");
+  const shouldFocusSelectedPanelRef = useRef(false);
   const voiceGuidanceEnabledRef = useRef(true);
+
+  const focusSelectedPanel = () => {
+    if (typeof window === "undefined" || isMobileViewport()) return;
+
+    window.requestAnimationFrame(() => {
+      const panel = selectedPanelRef.current;
+      if (!panel) return;
+
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+      panel.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start"
+      });
+      panel.focus({ preventScroll: true });
+    });
+  };
 
   useUrlInitialSelection(facilities, setSelectedId, setSelectedCategories);
 
@@ -641,6 +703,13 @@ export default function ShindaiMapApp({
     selectedFacilityIdRef.current = selectedFacility?.id || "";
   }, [selectedFacility?.id]);
 
+  useEffect(() => {
+    if (!selectedFacility || !shouldFocusSelectedPanelRef.current) return;
+
+    shouldFocusSelectedPanelRef.current = false;
+    focusSelectedPanel();
+  }, [selectedFacility?.id]);
+
   const mapFacilities = useMemo(() => {
     return filteredFacilities;
   }, [filteredFacilities]);
@@ -681,12 +750,19 @@ export default function ShindaiMapApp({
     scale: isSelected ? 11 : 8
   });
 
-  const selectFacility = (facility: Facility, options?: { zoomMap?: boolean }) => {
+  const selectFacility = (
+    facility: Facility,
+    options?: { zoomMap?: boolean; focusPanel?: boolean }
+  ) => {
     setSelectedId(facility.id);
     setRouteInfo(null);
     stopNavigation({ silent: true });
     setMobileMenuOpen(false);
     setMobilePanelState("expanded");
+    if (options?.focusPanel) {
+      shouldFocusSelectedPanelRef.current = true;
+      focusSelectedPanel();
+    }
     if (options?.zoomMap) {
       focusMapOnFacility(facility);
     }
@@ -827,7 +903,8 @@ export default function ShindaiMapApp({
 
         if (googleMapRef.current && typeof google !== "undefined") {
           if (!currentLocationMarkerRef.current) {
-            currentLocationMarkerRef.current = new google.maps.Marker({
+            const legacyMaps = getLegacyMapsApi();
+            currentLocationMarkerRef.current = new legacyMaps.Marker({
               map: googleMapRef.current,
               position: currentPosition,
               title: "現在地",
@@ -910,7 +987,8 @@ export default function ShindaiMapApp({
         });
 
         googleMapRef.current = map;
-        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+        const legacyMaps = getLegacyMapsApi();
+        directionsRendererRef.current = new legacyMaps.DirectionsRenderer({
           suppressMarkers: false,
           preserveViewport: false
         });
@@ -1016,7 +1094,8 @@ export default function ShindaiMapApp({
         continue;
       }
 
-      const marker = new google.maps.Marker({
+      const legacyMaps = getLegacyMapsApi();
+      const marker = new legacyMaps.Marker({
         map,
         position: facility.position,
         title: facility.name,
@@ -1175,7 +1254,8 @@ export default function ShindaiMapApp({
     if (!googleMapRef.current || typeof google === "undefined") return;
 
     if (!currentLocationMarkerRef.current) {
-      currentLocationMarkerRef.current = new google.maps.Marker({
+      const legacyMaps = getLegacyMapsApi();
+      currentLocationMarkerRef.current = new legacyMaps.Marker({
         map: googleMapRef.current,
         position: currentPosition,
         title: "現在地",
@@ -1236,7 +1316,8 @@ export default function ShindaiMapApp({
       return Promise.resolve(null);
     }
 
-    const service = new google.maps.DirectionsService();
+    const legacyMaps = getLegacyMapsApi();
+    const service = new legacyMaps.DirectionsService();
     return new Promise<
       (ReturnType<typeof extractRouteDetails> & {
         directionsResult: google.maps.DirectionsResult;
@@ -1735,8 +1816,10 @@ export default function ShindaiMapApp({
         {selectedFacility && (
           <section
             id="selected-facility-panel"
+            ref={selectedPanelRef}
             className={`selected-card is-mobile-panel-${mobilePanelState}`}
             aria-label="選択中の施設"
+            tabIndex={-1}
             style={
               { "--facility-color": categoryColor(selectedFacility) } as React.CSSProperties
             }
@@ -1767,6 +1850,12 @@ export default function ShindaiMapApp({
                 <div className="selected-meta">
                   <span className="pill">{selectedFacility.campus}</span>
                   <span className="pill">{selectedCategory?.shortLabel}</span>
+                  <span
+                    className="pill"
+                    title={`キャンパス中心から${formatDistance(campusDistance)}`}
+                  >
+                    {formatWalkingTime(campusDistance)}
+                  </span>
                   <span className="pill">{selectedFacility.area}</span>
                   {selectedFacility.officialMapNumber && (
                     <span className="pill">公式No.{selectedFacility.officialMapNumber}</span>
@@ -1850,16 +1939,6 @@ export default function ShindaiMapApp({
                   )}
                 </div>
               )}
-              <div className="guide-box route-guide">
-                <h3>案内</h3>
-                <ul>
-                  <li>
-                    キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
-                    （{formatDistance(campusDistance)}）
-                  </li>
-                  {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
-                </ul>
-              </div>
               <div className="guide-box campus-transit-guide">
                 <h3>キャンパス最寄りの時刻表</h3>
                 <CampusTransitRow title="バス" stopDistance={campusNearestBus} now={now} />
@@ -1890,8 +1969,10 @@ export default function ShindaiMapApp({
                 <button
                   className="result-select-button"
                   type="button"
-                  aria-expanded={isActive}
-                  onClick={() => selectFacility(facility, { zoomMap: true })}
+                  aria-current={isActive ? "true" : undefined}
+                  onClick={() =>
+                    selectFacility(facility, { zoomMap: true, focusPanel: true })
+                  }
                 >
                   <div className="result-top">
                     <h3>{facility.name}</h3>
@@ -1905,108 +1986,6 @@ export default function ShindaiMapApp({
                     {facility.campus} / {facility.area}
                   </p>
                 </button>
-
-                {isActive && selectedFacility && (
-                  <div className="result-expanded">
-                    <div className="selected-meta">
-                      <span className="pill">{selectedFacility.campus}</span>
-                      <span className="pill">{selectedCategory?.shortLabel}</span>
-                      <span className="pill">{selectedFacility.area}</span>
-                      {selectedFacility.officialMapNumber && (
-                        <span className="pill">
-                          公式No.{selectedFacility.officialMapNumber}
-                        </span>
-                      )}
-                    </div>
-                    <div className="action-grid">
-                      <button
-                        className="action-button primary"
-                        type="button"
-                        onClick={routeFromCurrentLocation}
-                      >
-                        <FontAwesomeIcon icon={faLocationArrow} />
-                        {navigationState?.active ? "案内中" : "ここへ行く"}
-                      </button>
-                      <button
-                        className="link-button"
-                        type="button"
-                        onClick={shareSelectedFacility}
-                      >
-                        <FontAwesomeIcon icon={faShareNodes} />
-                        共有
-                      </button>
-                    </div>
-                    {shareMessage && <p className="share-result">{shareMessage}</p>}
-                    {routeInfo && (
-                      <div className="route-panel">
-                        <FontAwesomeIcon icon={faRoute} />
-                        <span>
-                          {routeInfo.durationText} / {routeInfo.distanceText}
-                          {routeInfo.mode === "estimate" ? "（概算）" : ""}
-                        </span>
-                      </div>
-                    )}
-                    {navigationState && (
-                      <div
-                        className={`navigation-panel ${
-                          navigationState.offRoute ? "is-off-route" : ""
-                        }`}
-                      >
-                        <div className="navigation-panel-header">
-                          <span>
-                            <FontAwesomeIcon icon={faLocationArrow} />
-                            {navigationState.statusText}
-                          </span>
-                          <div className="navigation-controls">
-                            <button
-                              type="button"
-                              onClick={() => setVoiceGuidanceEnabled((enabled) => !enabled)}
-                              aria-label={
-                                voiceGuidanceEnabled ? "音声案内をオフ" : "音声案内をオン"
-                              }
-                            >
-                              <FontAwesomeIcon
-                                icon={
-                                  voiceGuidanceEnabled ? faVolumeHigh : faVolumeXmark
-                                }
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                stopNavigation();
-                                setRouteInfo(null);
-                                setMapMessage("案内を終了しました");
-                              }}
-                              aria-label="案内を終了"
-                            >
-                              <FontAwesomeIcon icon={faStop} />
-                            </button>
-                          </div>
-                        </div>
-                        <strong>{navigationState.nextInstruction}</strong>
-                        <div className="navigation-metrics">
-                          <span>{navigationState.durationText}</span>
-                          <span>{navigationState.distanceText}</span>
-                          <span>{navigationState.destinationName}</span>
-                        </div>
-                        {navigationState.recalculating && (
-                          <p>現在地に合わせてルートを更新しています。</p>
-                        )}
-                      </div>
-                    )}
-                    <div className="guide-box route-guide">
-                      <h3>案内</h3>
-                      <ul>
-                        <li>
-                          キャンパス中心から 徒歩 {formatWalkingTime(campusDistance)}
-                          （{formatDistance(campusDistance)}）
-                        </li>
-                        {selectedFacility.routeHint && <li>{selectedFacility.routeHint}</li>}
-                      </ul>
-                    </div>
-                  </div>
-                )}
               </article>
             );
           })}

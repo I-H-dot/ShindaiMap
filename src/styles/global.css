@@ -350,21 +350,14 @@ a {
   padding: calc(var(--tune-card-padding) + 2px);
 }
 
+.selected-card:focus {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 3px;
+}
+
 .mobile-sheet-content {
   display: grid;
   gap: 10px;
-}
-
-.result-expanded {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-  padding-top: 12px;
-}
-
-.result-expanded .selected-meta {
-  margin: 0;
 }
 
 .mobile-sheet-handle {
@@ -393,8 +386,7 @@ a {
   height: 20px;
 }
 
-.selected-card h2,
-.result-expanded h2 {
+.selected-card h2 {
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.3;
@@ -407,8 +399,7 @@ a {
   margin: 8px 0 0;
 }
 
-.selected-card p,
-.result-expanded p {
+.selected-card p {
   color: var(--muted);
   line-height: 1.62;
 }
@@ -458,10 +449,6 @@ a {
   border-radius: var(--tune-card-radius);
   padding: 10px;
   background: #f8fafc;
-}
-
-.route-guide {
-  margin-top: 10px;
 }
 
 .selected-card .campus-transit-guide {
@@ -1626,8 +1613,11 @@ a {
   }
 
   .map-locate-button {
-    bottom: 16px;
-    left: 16px;
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    z-index: 35;
     width: 46px;
     height: 46px;
   }
@@ -1789,14 +1779,6 @@ a {
     max-height: 28svh;
     overflow: auto;
     padding-bottom: 4px;
-  }
-
-  .result-expanded {
-    display: none;
-  }
-
-  .route-guide {
-    display: block;
   }
 
   .sidebar.is-mobile-menu-open.has-query .result-list {
