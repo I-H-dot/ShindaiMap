@@ -9,6 +9,7 @@ import {
   faBuilding,
   faBus,
   faCircleQuestion,
+  faCompass,
   faCouch,
   faCrosshairs,
   faEnvelope,
@@ -20,6 +21,7 @@ import {
   faMapPin,
   faMotorcycle,
   faPaperPlane,
+  faPlay,
   faRoute,
   faShareNodes,
   faSquareParking,
@@ -97,6 +99,14 @@ interface TouchStartState {
 interface PointerStartState extends TouchStartState {
   pointerId: number;
 }
+
+type DeviceOrientationEventWithCompass = DeviceOrientationEvent & {
+  webkitCompassHeading?: number;
+};
+
+type DeviceOrientationEventConstructorWithPermission = typeof DeviceOrientationEvent & {
+  requestPermission?: () => Promise<PermissionState>;
+};
 
 type LegacyMarkerOptions = {
   map: google.maps.Map;
@@ -177,6 +187,8 @@ const OFF_ROUTE_THRESHOLD_METERS = 45;
 const STEP_ARRIVAL_THRESHOLD_METERS = 24;
 const DESTINATION_ARRIVAL_THRESHOLD_METERS = 28;
 const REROUTE_COOLDOWN_MS = 12000;
+const NAVIGATION_CAMERA_ZOOM = 19;
+const MIN_HEADING_MOVE_METERS = 3;
 
 const cleanRouteInstruction = (instruction: string) => {
   if (typeof document === "undefined") {
@@ -233,6 +245,23 @@ const distanceToRoutePathMeters = (point: LatLng, path: LatLng[]) => {
     );
   }
   return shortest;
+};
+
+const normalizeHeading = (heading: number) => ((heading % 360) + 360) % 360;
+
+const isUsableHeading = (heading: number | null | undefined): heading is number =>
+  typeof heading === "number" && Number.isFinite(heading) && heading >= 0;
+
+const getBearingDegrees = (from: LatLng, to: LatLng) => {
+  const fromLat = (from.lat * Math.PI) / 180;
+  const toLat = (to.lat * Math.PI) / 180;
+  const deltaLng = ((to.lng - from.lng) * Math.PI) / 180;
+  const y = Math.sin(deltaLng) * Math.cos(toLat);
+  const x =
+    Math.cos(fromLat) * Math.sin(toLat) -
+    Math.sin(fromLat) * Math.cos(toLat) * Math.cos(deltaLng);
+
+  return normalizeHeading((Math.atan2(y, x) * 180) / Math.PI);
 };
 
 const transitModeLabel = (mode: TransitMode) => (mode === "bus" ? "バス" : "電車");
@@ -534,7 +563,9 @@ export default function ShindaiMapApp({
   );
   const [selectedId, setSelectedId] = useState(initialFacilities[0]?.id || "");
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
   const [navigationState, setNavigationState] = useState<NavigationState | null>(null);
+  const [navigationHeading, setNavigationHeading] = useState<number | null>(null);
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [transitPosition, setTransitPosition] = useState<LatLng | null>(null);
   const [transitStatusText, setTransitStatusText] =
@@ -563,6 +594,9 @@ export default function ShindaiMapApp({
   const navigationDestinationRef = useRef<Facility | null>(null);
   const navigationRoutePathRef = useRef<LatLng[]>([]);
   const navigationStepsRef = useRef<NavigationStep[]>([]);
+  const routePreviewOriginRef = useRef<LatLng | null>(null);
+  const lastKnownNavigationPositionRef = useRef<LatLng | null>(null);
+  const deviceHeadingRef = useRef<number | null>(null);
   const activeNavigationStepIndexRef = useRef(0);
   const navigationRequestIdRef = useRef(0);
   const selectedFacilityIdRef = useRef(selectedId);
@@ -637,6 +671,31 @@ export default function ShindaiMapApp({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!navigationState?.active || typeof window === "undefined") return;
+    if (!("DeviceOrientationEvent" in window)) return;
+
+    const handleOrientation = (event: Event) => {
+      const heading = extractDeviceHeading(event as DeviceOrientationEventWithCompass);
+      if (!isUsableHeading(heading)) return;
+
+      const normalizedHeading = normalizeHeading(heading);
+      deviceHeadingRef.current = normalizedHeading;
+      setNavigationHeading(normalizedHeading);
+
+      if (lastKnownNavigationPositionRef.current) {
+        applyNavigationCamera(lastKnownNavigationPositionRef.current, normalizedHeading);
+      }
+    };
+
+    window.addEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("deviceorientationabsolute", handleOrientation);
+    return () => {
+      window.removeEventListener("deviceorientation", handleOrientation);
+      window.removeEventListener("deviceorientationabsolute", handleOrientation);
+    };
+  }, [navigationState?.active]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 620px)");
@@ -1197,6 +1256,7 @@ export default function ShindaiMapApp({
 
   const stopNavigation = (options?: { keepPanel?: boolean; silent?: boolean }) => {
     createNavigationRequest();
+    setRouteLoading(false);
 
     if (navigationWatchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(navigationWatchIdRef.current);
@@ -1206,12 +1266,18 @@ export default function ShindaiMapApp({
     navigationDestinationRef.current = null;
     navigationRoutePathRef.current = [];
     navigationStepsRef.current = [];
+    routePreviewOriginRef.current = null;
+    lastKnownNavigationPositionRef.current = null;
+    deviceHeadingRef.current = null;
     activeNavigationStepIndexRef.current = 0;
     lastSpokenInstructionRef.current = "";
 
     if (!options?.keepPanel) {
       setNavigationState(null);
+      setNavigationHeading(null);
       clearRenderedDirections();
+      googleMapRef.current?.setHeading(0);
+      googleMapRef.current?.setTilt(0);
     }
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -1228,6 +1294,27 @@ export default function ShindaiMapApp({
     });
   };
 
+  const getJapaneseSpeechVoice = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+
+    const voices = window.speechSynthesis.getVoices();
+    return (
+      voices.find((voice) => voice.lang.toLowerCase() === "ja-jp") ||
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("ja")) ||
+      null
+    );
+  };
+
+  const createNavigationUtterance = (message: string) => {
+    const utterance = new SpeechSynthesisUtterance(message);
+    const japaneseVoice = getJapaneseSpeechVoice();
+    utterance.lang = japaneseVoice?.lang || "ja-JP";
+    utterance.voice = japaneseVoice;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    return utterance;
+  };
+
   const speakNavigation = (message: string) => {
     if (!voiceGuidanceEnabledRef.current) return;
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -1236,12 +1323,79 @@ export default function ShindaiMapApp({
     if (!trimmed || lastSpokenInstructionRef.current === trimmed) return;
 
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(trimmed);
-    utterance.lang = "ja-JP";
-    utterance.rate = 1;
-    utterance.pitch = 1;
+    window.speechSynthesis.resume();
+    const utterance = createNavigationUtterance(trimmed);
     lastSpokenInstructionRef.current = trimmed;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const requestDeviceOrientationAccess = async () => {
+    if (typeof window === "undefined" || !("DeviceOrientationEvent" in window)) {
+      return false;
+    }
+
+    const orientationEvent =
+      window.DeviceOrientationEvent as DeviceOrientationEventConstructorWithPermission;
+
+    if (!orientationEvent.requestPermission) {
+      return true;
+    }
+
+    try {
+      return (await orientationEvent.requestPermission()) === "granted";
+    } catch {
+      return false;
+    }
+  };
+
+  const extractDeviceHeading = (event: DeviceOrientationEventWithCompass) => {
+    if (isUsableHeading(event.webkitCompassHeading)) {
+      return normalizeHeading(event.webkitCompassHeading);
+    }
+
+    if (event.absolute && isUsableHeading(event.alpha)) {
+      return normalizeHeading(360 - event.alpha);
+    }
+
+    return null;
+  };
+
+  const applyNavigationCamera = (currentPosition: LatLng, heading: number | null) => {
+    const map = googleMapRef.current;
+    if (!map || typeof google === "undefined") return;
+
+    map.panTo(currentPosition);
+    map.setZoom(Math.max(map.getZoom() || NAVIGATION_CAMERA_ZOOM, NAVIGATION_CAMERA_ZOOM));
+    map.setTilt(0);
+
+    if (isUsableHeading(heading)) {
+      map.setHeading(normalizeHeading(heading));
+    }
+  };
+
+  const inferNavigationHeading = (
+    currentPosition: LatLng,
+    destination: Facility,
+    gpsHeading?: number | null
+  ) => {
+    if (isUsableHeading(deviceHeadingRef.current)) {
+      return normalizeHeading(deviceHeadingRef.current);
+    }
+
+    if (isUsableHeading(gpsHeading)) {
+      return normalizeHeading(gpsHeading);
+    }
+
+    const previousPosition = lastKnownNavigationPositionRef.current;
+    if (
+      previousPosition &&
+      metersBetween(previousPosition, currentPosition) >= MIN_HEADING_MOVE_METERS
+    ) {
+      return getBearingDegrees(previousPosition, currentPosition);
+    }
+
+    const nextStep = navigationStepsRef.current[activeNavigationStepIndexRef.current];
+    return getBearingDegrees(currentPosition, nextStep?.endLocation || destination.position);
   };
 
   const updateCurrentLocationMarker = (
@@ -1356,6 +1510,8 @@ export default function ShindaiMapApp({
     navigationRoutePathRef.current = [];
     navigationStepsRef.current = [];
     activeNavigationStepIndexRef.current = 0;
+    lastKnownNavigationPositionRef.current = null;
+    deviceHeadingRef.current = null;
     setNavigationState((state) =>
       state
         ? {
@@ -1370,6 +1526,9 @@ export default function ShindaiMapApp({
           }
         : state
     );
+    setNavigationHeading(null);
+    googleMapRef.current?.setHeading(0);
+    googleMapRef.current?.setTilt(0);
     speakNavigation(`${destination?.name || "目的地"}周辺に到着しました。`);
   };
 
@@ -1457,11 +1616,18 @@ export default function ShindaiMapApp({
     );
   };
 
-  const updateNavigationProgress = (currentPosition: LatLng) => {
+  const updateNavigationProgress = (
+    currentPosition: LatLng,
+    gpsHeading?: number | null
+  ) => {
     const destination = navigationDestinationRef.current;
     if (!destination) return;
 
     updateCurrentLocationMarker(currentPosition);
+    const heading = inferNavigationHeading(currentPosition, destination, gpsHeading);
+    setNavigationHeading(heading);
+    applyNavigationCamera(currentPosition, heading);
+
     const metersToDestination = metersBetween(currentPosition, destination.position);
     if (metersToDestination <= DESTINATION_ARRIVAL_THRESHOLD_METERS) {
       finishNavigation();
@@ -1532,6 +1698,7 @@ export default function ShindaiMapApp({
           }
         : state
     );
+    lastKnownNavigationPositionRef.current = currentPosition;
   };
 
   const startNavigationWatch = () => {
@@ -1547,7 +1714,7 @@ export default function ShindaiMapApp({
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
-        updateNavigationProgress(currentPosition);
+        updateNavigationProgress(currentPosition, position.coords.heading);
       },
       () => {
         setNavigationState((state) =>
@@ -1564,30 +1731,118 @@ export default function ShindaiMapApp({
     );
   };
 
-  const routeFromCurrentLocation = () => {
-    if (!selectedFacility) return;
+  const showRouteFromCurrentLocation = () => {
+    if (!selectedFacility || routeLoading) return;
 
     const destination = selectedFacility;
     const fallbackOrigin = campusCenters[destination.campus];
+    stopNavigation({ silent: true });
+    const requestId = createNavigationRequest();
+
+    const showEstimatedRoute = (origin: LatLng, statusText: string) => {
+      if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+      routePreviewOriginRef.current = origin;
+      setRouteLoading(false);
+      estimateRoute(origin, destination);
+      setMapMessage(statusText);
+    };
+
+    setRouteLoading(true);
+    setRouteInfo(null);
+    setNavigationState(null);
+    setNavigationHeading(null);
+    setMapMessage("現在地からルートを表示中");
+
+    if (!navigator.geolocation) {
+      showEstimatedRoute(fallbackOrigin, "現在地を取得できないため概算ルートを表示中");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+        const origin = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+
+        routePreviewOriginRef.current = origin;
+        updateCurrentLocationMarker(origin, { panMap: true });
+        const routeDetails = await requestWalkingRoute(origin, destination);
+
+        if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+        setRouteLoading(false);
+        if (!routeDetails) {
+          estimateRoute(origin, destination);
+          setMapMessage("Google Mapsの経路を取得できないため概算ルートを表示中");
+          return;
+        }
+
+        directionsRendererRef.current?.setDirections(routeDetails.directionsResult);
+        setRouteInfo({
+          distanceText: routeDetails.distanceText,
+          durationText: routeDetails.durationText,
+          mode: "google"
+        });
+        setMapMessage("ルートを表示中");
+      },
+      () => {
+        showEstimatedRoute(
+          fallbackOrigin,
+          "現在地を取得できなかったため概算ルートを表示中"
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
+    );
+  };
+
+  const startVoiceNavigation = () => {
+    if (!selectedFacility) return;
+
+    const destination = selectedFacility;
+    const fallbackOrigin = routePreviewOriginRef.current || campusCenters[destination.campus];
+    stopNavigation({ keepPanel: true, silent: true });
+    const requestId = createNavigationRequest();
+
+    setVoiceGuidanceEnabled(true);
+    voiceGuidanceEnabledRef.current = true;
+    setNavigationHeading(null);
+    setMobileMenuOpen(false);
+    setMobilePanelState("closed");
+    setNavigationState({
+      active: true,
+      destinationName: destination.name,
+      statusText: "案内を開始中",
+      distanceText: routeInfo?.distanceText || "-",
+      durationText: routeInfo?.durationText || "-",
+      nextInstruction: "現在地を確認中",
+      offRoute: false,
+      recalculating: true
+    });
+    setMapMessage("音声案内を開始中");
+    void requestDeviceOrientationAccess();
+    speakNavigation("音声案内を開始します。");
+
     if (!navigator.geolocation) {
       const meters = metersBetween(fallbackOrigin, destination.position);
       estimateRoute(fallbackOrigin, destination);
       setNavigationState({
         active: false,
         destinationName: destination.name,
-        statusText: "現在地を取得できないため概算のみ表示",
+        statusText: "現在地を取得できないため案内を開始できません",
         distanceText: formatDistance(meters),
         durationText: formatWalkingTime(meters),
         nextInstruction: "現在地を使えるブラウザで案内を開始できます",
         offRoute: false,
         recalculating: false
       });
+      speakNavigation("現在地を取得できないため、案内を開始できません。");
       return;
     }
 
-    stopNavigation({ silent: true });
-    const requestId = createNavigationRequest();
-    setMapMessage("現在地を取得して案内を開始中");
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (!isNavigationRequestCurrent(requestId, destination)) return;
@@ -1596,12 +1851,16 @@ export default function ShindaiMapApp({
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
+        const heading = inferNavigationHeading(origin, destination, position.coords.heading);
 
+        routePreviewOriginRef.current = origin;
+        lastKnownNavigationPositionRef.current = origin;
+        setNavigationHeading(heading);
         updateCurrentLocationMarker(origin, { panMap: true });
-        focusMapOnFacility(destination, FOCUSED_FACILITY_ZOOM);
+        applyNavigationCamera(origin, heading);
         void startNavigationRoute(origin, destination, "start", requestId);
         startNavigationWatch();
-        setMapMessage("ルート案内中");
+        setMapMessage("音声案内中");
       },
       () => {
         if (!isNavigationRequestCurrent(requestId, destination)) return;
@@ -1611,13 +1870,15 @@ export default function ShindaiMapApp({
         setNavigationState({
           active: false,
           destinationName: destination.name,
-          statusText: "現在地を取得できなかったため概算のみ表示",
+          statusText: "現在地を取得できなかったため案内を開始できません",
           distanceText: formatDistance(meters),
           durationText: formatWalkingTime(meters),
           nextInstruction: "位置情報を許可すると案内を開始できます",
           offRoute: false,
           recalculating: false
         });
+        setMapMessage("現在地を取得できませんでした");
+        speakNavigation("現在地を取得できませんでした。位置情報を許可してください。");
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
     );
@@ -1706,9 +1967,13 @@ export default function ShindaiMapApp({
       })[0] || null,
     [selectedTransitReferencePosition.lat, selectedTransitReferencePosition.lng]
   );
+  const isNavigationMode = navigationState?.active === true;
+  const navigationHeadingText = isUsableHeading(navigationHeading)
+    ? `${Math.round(navigationHeading)}°`
+    : "進行方向を推定中";
 
   return (
-    <main className="map-shell">
+    <main className={`map-shell ${isNavigationMode ? "is-navigation-mode" : ""}`}>
       <aside
         className={`sidebar ${mobileMenuOpen ? "is-mobile-menu-open" : ""} ${
           query.trim() ? "has-query" : ""
@@ -1872,10 +2137,11 @@ export default function ShindaiMapApp({
                 <button
                   className="action-button primary"
                   type="button"
-                  onClick={routeFromCurrentLocation}
+                  onClick={showRouteFromCurrentLocation}
+                  disabled={routeLoading}
                 >
                   <FontAwesomeIcon icon={faLocationArrow} />
-                  {navigationState?.active ? "案内中" : "ここへ行く"}
+                  {routeLoading ? "ルート取得中" : "ルートを表示"}
                 </button>
                 <button className="link-button" type="button" onClick={shareSelectedFacility}>
                   <FontAwesomeIcon icon={faShareNodes} />
@@ -1885,14 +2151,20 @@ export default function ShindaiMapApp({
               {shareMessage && <p className="share-result">{shareMessage}</p>}
               {routeInfo && (
                 <div className="route-panel">
-                  <FontAwesomeIcon icon={faRoute} />
-                  <span>
-                    {routeInfo.durationText} / {routeInfo.distanceText}
-                    {routeInfo.mode === "estimate" ? "（概算）" : ""}
-                  </span>
+                  <div className="route-panel-summary">
+                    <FontAwesomeIcon icon={faRoute} />
+                    <span>
+                      {routeInfo.durationText} / {routeInfo.distanceText}
+                      {routeInfo.mode === "estimate" ? "（概算）" : ""}
+                    </span>
+                  </div>
+                  <button type="button" onClick={startVoiceNavigation}>
+                    <FontAwesomeIcon icon={faPlay} />
+                    案内開始
+                  </button>
                 </div>
               )}
-              {navigationState && (
+              {navigationState && !navigationState.active && (
                 <div
                   className={`navigation-panel ${
                     navigationState.offRoute ? "is-off-route" : ""
@@ -2082,6 +2354,59 @@ export default function ShindaiMapApp({
               );
             })}
           </div>
+        )}
+        {isNavigationMode && navigationState && (
+          <section
+            className={`turn-by-turn-ui ${
+              navigationState.offRoute ? "is-off-route" : ""
+            }`}
+            aria-label="音声案内"
+          >
+            <div className="turn-instruction-panel">
+              <div className="turn-status-row">
+                <span>
+                  <FontAwesomeIcon icon={faLocationArrow} />
+                  {navigationState.statusText}
+                </span>
+                <span className="heading-chip">
+                  <FontAwesomeIcon icon={faCompass} />
+                  {navigationHeadingText}
+                </span>
+              </div>
+              <strong>{navigationState.nextInstruction}</strong>
+              <div className="turn-metrics">
+                <span>{navigationState.durationText}</span>
+                <span>{navigationState.distanceText}</span>
+                <span>{navigationState.destinationName}</span>
+              </div>
+              {navigationState.recalculating && (
+                <p>現在地に合わせてルートを更新しています。</p>
+              )}
+            </div>
+            <div className="turn-control-bar">
+              <button
+                type="button"
+                onClick={() => setVoiceGuidanceEnabled((enabled) => !enabled)}
+                aria-label={voiceGuidanceEnabled ? "音声案内をオフ" : "音声案内をオン"}
+              >
+                <FontAwesomeIcon
+                  icon={voiceGuidanceEnabled ? faVolumeHigh : faVolumeXmark}
+                />
+                {voiceGuidanceEnabled ? "音声オン" : "音声オフ"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  stopNavigation();
+                  setRouteInfo(null);
+                  setMapMessage("案内を終了しました");
+                }}
+              >
+                <FontAwesomeIcon icon={faStop} />
+                終了
+              </button>
+            </div>
+          </section>
         )}
 
       </section>
