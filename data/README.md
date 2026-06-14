@@ -18,6 +18,8 @@
 
 AEDは公開されている神戸大学AED設置場所一覧に記載されたものを`aedLocations.json`へ入れます。座標は公式番号施設に対応するものは施設代表点を使い、公式番号施設に対応しないものはAEDマップ画像上のアイコン中心を公式番号ピン制御点で座標変換します。2025年3月24日現在の公開一覧と楠地区キャンパスマップには楠地区のAED設置場所が載っていないため、楠地区のAEDピンは未確認データとして追加しません。
 
+バス停の座標は`transitStops.json`で管理します。神戸市バスの停留所は、神戸市交通局の停留所情報ページに埋め込まれている公式地図座標を使い、各レコードの`positionSourceUrl`と`positionSourceName`へ出典を残してください。
+
 ## 主な参照先
 
 - [神戸大学 六甲台第1キャンパス](https://www.kobe-u.ac.jp/ja/campus-life/general/access/rokko/rokkodai1/)
@@ -30,6 +32,7 @@ AEDは公開されている神戸大学AED設置場所一覧に記載された�
 - [神戸大学 その他の地区](https://www.kobe-u.ac.jp/ja/campus-life/general/access/other/)
 - [神戸大学海洋政策科学部 アクセス](https://www.ocean.kobe-u.ac.jp/access)
 - [神戸大学AED設置場所一覧](https://www.kobe-u.ac.jp/sites/default/files/doc-page/2025-03/aed_all_20240324.pdf)
+- [神戸市交通局 停留所一覧](https://kotsu.city.kobe.lg.jp/bus/bus-stop-list/)
 
 このプロジェクトは神戸大学の非公式プロジェクトです。施設名、公式ページの文章・画像、ロゴ、商標などの第三者権利は、リポジトリのMIT Licenseによって再許諾されるものではありません。
 

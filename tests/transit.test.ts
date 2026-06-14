@@ -30,12 +30,33 @@ describe("transit helpers", () => {
   it("finds the nearest transit stop by current position", () => {
     const nearest = getNearestTransitStops(
       transitStops,
-      { lat: 34.72695, lng: 135.23435 },
+      { lat: 34.72728, lng: 135.23572 },
       { limit: 1 }
     );
 
     expect(nearest[0]?.stop.id).toBe("citybus-shindai-honbu-kogakubu");
-    expect(nearest[0]?.distanceMeters).toBeLessThan(80);
+    expect(nearest[0]?.distanceMeters).toBeLessThan(20);
+  });
+
+  it("uses official Kobe City Transportation coordinates for bus stops", () => {
+    const expectedCoordinates = new Map([
+      ["citybus-shindai-honbu-kogakubu", { lat: 34.7272835, lng: 135.235718 }],
+      ["citybus-shindai-main-gate", { lat: 34.7271957, lng: 135.234268 }],
+      ["citybus-kokusai-bunka", { lat: 34.72867, lng: 135.237625 }],
+      ["citybus-hattatsu-kagaku", { lat: 34.73311, lng: 135.234848 }],
+      ["citybus-daigaku-byoin", { lat: 34.68497, lng: 135.169846 }],
+      ["citybus-fukae-campus", { lat: 34.72221, lng: 135.292252 }],
+      ["citybus-myodani", { lat: 34.6791153, lng: 135.09346 }]
+    ]);
+
+    for (const [stopId, expected] of expectedCoordinates) {
+      const stop = transitStops.find((candidate) => candidate.id === stopId);
+      expect(stop).toBeDefined();
+      expect(stop?.mode).toBe("bus");
+      expect(stop?.position.lat).toBeCloseTo(expected.lat, 7);
+      expect(stop?.position.lng).toBeCloseTo(expected.lng, 7);
+      expect(stop?.positionSourceUrl).toContain("kotsu.city.kobe.lg.jp/bus/bus-stop-list/");
+    }
   });
 
   it("returns first and next departures for a weekday", () => {

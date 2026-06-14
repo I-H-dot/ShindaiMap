@@ -18,6 +18,10 @@ export const campusCenters: Record<CampusName, { lat: number; lng: number; label
 const transitStopFacilities: Facility[] = transitStops.map((stop) => {
   const isTrain = stop.mode === "train";
   const placeLabel = isTrain ? `${stop.name}駅` : `${stop.name}バス停`;
+  const positionSourceLink =
+    !isTrain && stop.positionSourceUrl && stop.positionSourceUrl !== stop.timetableUrl
+      ? [{ label: `${stop.name} 停留所地図`, url: stop.positionSourceUrl }]
+      : [];
 
   return {
     id: isTrain ? `station-${stop.id}` : `bus-${stop.id}`,
@@ -46,15 +50,16 @@ const transitStopFacilities: Facility[] = transitStops.map((stop) => {
     routeHint: stop.direction,
     links: [
       { label: `${stop.name} 時刻表`, url: stop.timetableUrl },
+      ...positionSourceLink,
       ...(stop.timetableLinks || []).map((link) => ({
         label: link.label,
         url: link.url
       }))
     ],
-    updatedAt: "2026-06-12",
+    updatedAt: stop.updatedAt || "2026-06-12",
     source: isTrain
       ? `${stop.operator} station information and ShindaiMap train timetable data`
-      : `${stop.operator} bus stop information and ShindaiMap representative bus timetable data`
+      : `${stop.positionSourceName || `${stop.operator} bus stop information`} and ShindaiMap representative bus timetable data`
   };
 });
 

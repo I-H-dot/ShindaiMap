@@ -1875,7 +1875,7 @@ export default function ShindaiMapApp({
         )}
 
         <section id="search-results" className="result-list" aria-label="検索結果">
-          {filteredFacilities.slice(0, 16).map((facility) => {
+          {filteredFacilities.map((facility) => {
             const isActive = facility.id === selectedFacility?.id;
             const resultCategory = getCategory(facility.category);
 

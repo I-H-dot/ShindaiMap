@@ -187,6 +187,9 @@ interface TransitStopRecord {
     url: string;
     direction?: string;
   }>;
+  positionSourceUrl?: string;
+  positionSourceName?: string;
+  updatedAt?: string;
   note: string;
   scheduleKey: TransitScheduleKey;
 }
@@ -215,6 +218,9 @@ const transitStopSeed = transitStopRecords.map((record): TransitStop => ({
   position: record.position,
   timetableUrl: record.timetableUrl,
   timetableLinks: record.timetableLinks,
+  positionSourceUrl: record.positionSourceUrl,
+  positionSourceName: record.positionSourceName,
+  updatedAt: record.updatedAt,
   note: record.note,
   schedule: transitScheduleMap[record.scheduleKey],
   ...(record.mode === "train"

@@ -345,8 +345,14 @@ a {
 }
 
 .selected-card {
-  display: none;
+  display: grid;
+  gap: 12px;
   padding: calc(var(--tune-card-padding) + 2px);
+}
+
+.mobile-sheet-content {
+  display: grid;
+  gap: 10px;
 }
 
 .result-expanded {
@@ -456,6 +462,10 @@ a {
 
 .route-guide {
   margin-top: 10px;
+}
+
+.selected-card .campus-transit-guide {
+  display: none;
 }
 
 .guide-box h3 {
@@ -1762,6 +1772,10 @@ a {
     border-color: #073b86;
     background: #073b86;
     color: #fff;
+  }
+
+  .selected-card .campus-transit-guide {
+    display: block;
   }
 
   .tag-row,

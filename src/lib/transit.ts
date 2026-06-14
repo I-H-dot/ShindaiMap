@@ -43,6 +43,9 @@ export interface TransitStop {
     url: string;
     direction?: string;
   }>;
+  positionSourceUrl?: string;
+  positionSourceName?: string;
+  updatedAt?: string;
   note: string;
   schedule: TransitSchedule;
   directionSchedules?: Record<string, TransitSchedule>;
