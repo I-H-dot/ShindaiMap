@@ -1,4 +1,17 @@
+import Fuse from "fuse.js";
 import type { CampusName, Facility, FacilityCategory, FacilityFilters } from "./types";
+
+const facilitySearchKeys = [
+  "name",
+  "campus",
+  "area",
+  "aliases",
+  "tags",
+  "building",
+  "roomExamples",
+  "officialMapNumber",
+  "sourceArea"
+];
 
 const normalize = (value: string) =>
   value
@@ -24,13 +37,37 @@ export const facilitySearchText = (facility: Facility) =>
       .join(" ")
   );
 
-export const filterFacilities = (
+const fuzzySearchFacilities = (facilities: Facility[], query: string) => {
+  const fuse = new Fuse(facilities, {
+    threshold: 0.34,
+    ignoreLocation: true,
+    keys: facilitySearchKeys
+  });
+
+  return fuse.search(query).map((result) => result.item);
+};
+
+const queryMatches = (facility: Facility, normalizedQuery: string) =>
+  facilitySearchText(facility).includes(normalizedQuery);
+
+export const searchFacilities = (
   facilities: Facility[],
   filters: FacilityFilters
 ) => {
+  const trimmedQuery = filters.query.trim();
   const normalizedQuery = normalize(filters.query);
 
-  return facilities.filter((facility) => {
+  const searchedFacilities = !trimmedQuery
+    ? facilities
+    : [
+        ...facilities.filter((facility) => queryMatches(facility, normalizedQuery)),
+        ...fuzzySearchFacilities(facilities, trimmedQuery)
+      ].filter(
+        (facility, index, matches) =>
+          matches.findIndex((candidate) => candidate.id === facility.id) === index
+      );
+
+  return searchedFacilities.filter((facility) => {
     if (filters.campus !== "all" && facility.campus !== filters.campus) {
       return false;
     }
@@ -39,13 +76,11 @@ export const filterFacilities = (
       return false;
     }
 
-    if (!normalizedQuery) {
-      return true;
-    }
-
-    return facilitySearchText(facility).includes(normalizedQuery);
+    return true;
   });
 };
+
+export const filterFacilities = searchFacilities;
 
 export const countFacilitiesByCategory = (
   facilities: Facility[],

@@ -2,9 +2,34 @@ import { describe, expect, it } from "vitest";
 import { categories } from "../src/data/categories";
 import { generatedTrainTimetables } from "../src/data/generated/trainTimetables";
 import { officialFacilities } from "../src/data/officialFacilities";
-import { facilities } from "../src/data/facilities";
+import { campusCenters, facilities } from "../src/data/facilities";
 import { transitStops } from "../src/data/transit";
 import type { FacilityCategory } from "../src/lib/types";
+
+const kobeUniversityBounds = {
+  minLat: 34.55,
+  maxLat: 34.78,
+  minLng: 135.05,
+  maxLng: 135.32
+};
+
+const coordinateExceptionBounds = new Map([
+  [
+    "official-other-1",
+    {
+      minLat: 35.65,
+      maxLat: 35.7,
+      minLng: 139.72,
+      maxLng: 139.79
+    }
+  ]
+]);
+
+const isValidDateOnly = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+};
 
 describe("seed data", () => {
   it("has unique facility ids", () => {
@@ -39,6 +64,41 @@ describe("seed data", () => {
     for (const required of requiredCategories) {
       expect(categoryIds.has(required)).toBe(true);
       expect(usedCategoryIds.has(required)).toBe(true);
+    }
+  });
+
+  it("keeps operational metadata and links valid", () => {
+    for (const facility of facilities) {
+      expect(isValidDateOnly(facility.updatedAt), `${facility.id} has an invalid updatedAt`).toBe(
+        true
+      );
+      expect(campusCenters[facility.campus], `${facility.id} has an unknown campus`).toBeDefined();
+      expect(facility.source.trim(), `${facility.id} needs a source`).not.toBe("");
+
+      for (const link of facility.links || []) {
+        expect(link.label.trim(), `${facility.id} has an empty link label`).not.toBe("");
+        let parsedUrl: URL;
+        expect(() => {
+          parsedUrl = new URL(link.url);
+        }, `${facility.id} has an invalid URL: ${link.url}`).not.toThrow();
+        expect(["http:", "https:"], `${facility.id} uses an unsupported URL protocol`).toContain(
+          parsedUrl!.protocol
+        );
+      }
+    }
+  });
+
+  it("keeps facility coordinates near the Kobe University service area", () => {
+    for (const facility of facilities) {
+      const bounds = coordinateExceptionBounds.get(facility.id) || kobeUniversityBounds;
+      expect(facility.position.lat, `${facility.id} latitude is outside the service area`)
+        .toBeGreaterThanOrEqual(bounds.minLat);
+      expect(facility.position.lat, `${facility.id} latitude is outside the service area`)
+        .toBeLessThanOrEqual(bounds.maxLat);
+      expect(facility.position.lng, `${facility.id} longitude is outside the service area`)
+        .toBeGreaterThanOrEqual(bounds.minLng);
+      expect(facility.position.lng, `${facility.id} longitude is outside the service area`)
+        .toBeLessThanOrEqual(bounds.maxLng);
     }
   });
 

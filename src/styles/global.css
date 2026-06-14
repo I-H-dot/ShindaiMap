@@ -208,6 +208,18 @@ a {
   margin-top: 10px;
 }
 
+.result-summary {
+  margin: 0;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: var(--tune-card-radius);
+  padding: 8px 10px;
+  background: rgba(37, 99, 235, 0.055);
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .mobile-filter-toggle {
   align-items: center;
   justify-content: center;
@@ -564,6 +576,30 @@ a {
 }
 
 .fallback-campus-label span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.fallback-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  width: min(320px, calc(100% - 48px));
+  border: 1px solid var(--line);
+  border-radius: var(--tune-card-radius);
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--ink);
+  text-align: center;
+  box-shadow: var(--shadow);
+  transform: translate(-50%, -50%);
+}
+
+.fallback-empty-state span {
   color: var(--muted);
   font-size: 0.86rem;
   line-height: 1.45;
