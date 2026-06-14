@@ -1,0 +1,343 @@
+[
+  {
+    "id": "citybus-shindai-honbu-kogakubu",
+    "name": "神大本部工学部前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "36系統",
+    "direction": "阪神御影・JR六甲道方面 / 鶴甲団地方面",
+    "campus": "六甲台第2",
+    "position": { "lat": 34.72696, "lng": 135.23431 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/bus/bus-stop-list/bus-119/",
+    "note": "アプリ内時刻は36系統の代表的な発車間隔から作った目安です。",
+    "scheduleKey": "bus36"
+  },
+  {
+    "id": "citybus-shindai-main-gate",
+    "name": "神大正門前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "36系統",
+    "direction": "阪神御影・JR六甲道方面 / 鶴甲団地方面",
+    "campus": "六甲台第1",
+    "position": { "lat": 34.72415, "lng": 135.23498 },
+    "timetableUrl": "https://www.city.kobe.lg.jp/life/access/transport/bus/jikoku/basjikoku/0360119020.html",
+    "note": "アプリ内時刻は36系統の代表的な発車間隔から作った目安です。",
+    "scheduleKey": "bus36"
+  },
+  {
+    "id": "citybus-kokusai-bunka",
+    "name": "神大国際文化学研究科前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "16・106系統",
+    "direction": "阪神御影方面 / 六甲ケーブル下方面",
+    "campus": "鶴甲第1",
+    "position": { "lat": 34.73009, "lng": 135.22924 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/bus/bus-stop-list/bus-129/",
+    "note": "一部便は曜日・大学休校日で運行条件が変わります。公式時刻表を確認してください。",
+    "scheduleKey": "bus16"
+  },
+  {
+    "id": "citybus-hattatsu-kagaku",
+    "name": "神大人間発達環境学研究科前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "16・106系統",
+    "direction": "阪神御影方面 / 六甲ケーブル下方面",
+    "campus": "鶴甲第2",
+    "position": { "lat": 34.72622, "lng": 135.22603 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/search-ktb/timetable/",
+    "note": "停留所名で検索して最新の公式時刻表を確認してください。",
+    "scheduleKey": "bus16"
+  },
+  {
+    "id": "citybus-daigaku-byoin",
+    "name": "大学病院前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "9・110・112系統ほか",
+    "direction": "三宮・神戸駅方面",
+    "campus": "楠",
+    "position": { "lat": 34.68556, "lng": 135.17052 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/search-ktb/timetable/",
+    "note": "行先が複数あります。公式検索で目的地方面を選んでください。",
+    "scheduleKey": "localBus"
+  },
+  {
+    "id": "citybus-fukae-campus",
+    "name": "深江駅前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "東灘区方面",
+    "direction": "阪神深江・東灘方面",
+    "campus": "深江",
+    "position": { "lat": 34.72261, "lng": 135.29156 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/search-ktb/timetable/",
+    "note": "深江キャンパス周辺のバスは便数が限られるため、鉄道も合わせて確認してください。",
+    "scheduleKey": "localBus"
+  },
+  {
+    "id": "citybus-myodani",
+    "name": "名谷駅前",
+    "mode": "bus",
+    "operator": "神戸市バス",
+    "line": "15系統ほか",
+    "direction": "名谷駅前発着",
+    "campus": "名谷",
+    "position": { "lat": 34.67935, "lng": 135.09461 },
+    "timetableUrl": "https://www.city.kobe.lg.jp/life/access/transport/bus/jikoku/basjikoku/0150643020.html",
+    "note": "行先が複数あります。公式検索で目的地方面を選んでください。",
+    "scheduleKey": "localBus"
+  },
+  {
+    "id": "jr-rokkomichi",
+    "name": "六甲道",
+    "mode": "train",
+    "operator": "JR",
+    "line": "JR神戸線",
+    "direction": "尼崎・大阪・京都方面 / 三ノ宮・姫路方面",
+    "campus": "六甲台第2",
+    "position": { "lat": 34.71458, "lng": 135.23843 },
+    "timetableUrl": "https://eki.jr-odekake.net/top?id=0610140",
+    "timetableLinks": [
+      {
+        "label": "尼崎・大阪・京都方面",
+        "direction": "尼崎・大阪・京都方面",
+        "url": "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=1&MD=3"
+      },
+      {
+        "label": "三ノ宮・姫路方面",
+        "direction": "三ノ宮・姫路方面",
+        "url": "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=0&MD=3"
+      }
+    ],
+    "note": "月次取得データとJRおでかけネットのリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "jr"
+  },
+  {
+    "id": "hankyu-rokko",
+    "name": "六甲",
+    "mode": "train",
+    "operator": "阪急電鉄",
+    "line": "神戸線",
+    "direction": "大阪梅田・西宮北口方面 / 神戸三宮・新開地方面",
+    "campus": "六甲台第1",
+    "position": { "lat": 34.71968, "lng": 135.23372 },
+    "timetableUrl": "https://www.hankyu.co.jp/station/rokko.html",
+    "timetableLinks": [
+      {
+        "label": "大阪梅田・西宮北口方面 平日",
+        "direction": "大阪梅田・西宮北口方面",
+        "url": "https://www.hankyu.co.jp/station/html/HK-13_ko_1_w.html"
+      },
+      {
+        "label": "大阪梅田・西宮北口方面 土休日",
+        "direction": "大阪梅田・西宮北口方面",
+        "url": "https://www.hankyu.co.jp/station/html/HK-13_ko_1_h.html"
+      },
+      {
+        "label": "神戸三宮・新開地方面 平日",
+        "direction": "神戸三宮・新開地方面",
+        "url": "https://www.hankyu.co.jp/station/html/HK-13_ko_2_w.html"
+      },
+      {
+        "label": "神戸三宮・新開地方面 土休日",
+        "direction": "神戸三宮・新開地方面",
+        "url": "https://www.hankyu.co.jp/station/html/HK-13_ko_2_h.html"
+      }
+    ],
+    "note": "月次取得データと阪急電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "hankyu"
+  },
+  {
+    "id": "hanshin-mikage",
+    "name": "御影",
+    "mode": "train",
+    "operator": "阪神電鉄",
+    "line": "阪神本線",
+    "direction": "大阪梅田・尼崎方面 / 高速神戸・山陽姫路方面",
+    "campus": "六甲台第2",
+    "position": { "lat": 34.7148839, "lng": 135.2561383 },
+    "timetableUrl": "https://www.hanshin.co.jp/station/mikage.html",
+    "timetableLinks": [
+      {
+        "label": "御影駅 公式時刻表",
+        "url": "https://www.hanshin.co.jp/station/mikage.html"
+      }
+    ],
+    "note": "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "hanshin"
+  },
+  {
+    "id": "hanshin-fukae",
+    "name": "深江",
+    "mode": "train",
+    "operator": "阪神電鉄",
+    "line": "阪神本線",
+    "direction": "大阪梅田・尼崎方面 / 高速神戸・御影方面",
+    "campus": "深江",
+    "position": { "lat": 34.7227, "lng": 135.2913172 },
+    "timetableUrl": "https://www.hanshin.co.jp/station/fukae.html",
+    "timetableLinks": [
+      {
+        "label": "深江駅 公式時刻表",
+        "url": "https://www.hanshin.co.jp/station/fukae.html"
+      }
+    ],
+    "note": "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "hanshin"
+  },
+  {
+    "id": "hanshin-shinzaike",
+    "name": "新在家",
+    "mode": "train",
+    "operator": "阪神電鉄",
+    "line": "阪神本線",
+    "direction": "大阪梅田・尼崎方面 / 高速神戸・神戸三宮方面",
+    "campus": "六甲台第2",
+    "position": { "lat": 34.7106261, "lng": 135.2406205 },
+    "timetableUrl": "https://www.hanshin.co.jp/station/shinzaike.html",
+    "timetableLinks": [
+      {
+        "label": "新在家駅 公式時刻表",
+        "url": "https://www.hanshin.co.jp/station/shinzaike.html"
+      }
+    ],
+    "note": "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "hanshin"
+  },
+  {
+    "id": "kobekosoku-kosokukobe",
+    "name": "高速神戸",
+    "mode": "train",
+    "operator": "阪急電鉄・阪神電鉄",
+    "line": "神戸高速線",
+    "direction": "梅田(阪神)・神戸三宮(阪神)方面 / 梅田(阪急)・神戸三宮(阪急)方面 / 山陽姫路・新開地方面",
+    "campus": "その他",
+    "position": { "lat": 34.679361, "lng": 135.174439 },
+    "timetableUrl": "https://transit.yahoo.co.jp/timetable/26352",
+    "timetableLinks": [
+      {
+        "label": "高速神戸駅 Yahoo!路線情報",
+        "url": "https://transit.yahoo.co.jp/timetable/26352"
+      }
+    ],
+    "note": "月次取得データを表示します。最新の臨時変更は各事業者の公式時刻表を確認してください。",
+    "scheduleKey": "hanshin"
+  },
+  {
+    "id": "jr-kobe",
+    "name": "神戸",
+    "mode": "train",
+    "operator": "JR",
+    "line": "JR神戸線",
+    "direction": "尼崎・大阪・京都方面 / 西明石・網干方面",
+    "campus": "その他",
+    "position": { "lat": 34.679528, "lng": 135.178025 },
+    "timetableUrl": "https://www.jr-odekake.net/eki/top?id=0610145",
+    "timetableLinks": [
+      {
+        "label": "神戸駅 JRおでかけネット",
+        "url": "https://www.jr-odekake.net/eki/top?id=0610145"
+      }
+    ],
+    "note": "月次取得データとJRおでかけネットのリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "jr"
+  },
+  {
+    "id": "subway-myodani",
+    "name": "名谷",
+    "mode": "train",
+    "operator": "神戸市営地下鉄",
+    "line": "西神・山手線",
+    "direction": "谷上・新神戸方面 / 西神中央方面",
+    "campus": "名谷",
+    "position": { "lat": 34.67919, "lng": 135.09443 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/",
+    "timetableLinks": [
+      {
+        "label": "名谷駅 公式時刻表",
+        "url": "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/"
+      }
+    ],
+    "note": "月次取得データと神戸市交通局の駅時刻表リンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "subway"
+  },
+  {
+    "id": "subway-okurayama",
+    "name": "大倉山",
+    "mode": "train",
+    "operator": "神戸市営地下鉄",
+    "line": "西神・山手線",
+    "direction": "谷上・新神戸方面 / 西神中央方面",
+    "campus": "楠",
+    "position": { "lat": 34.68404, "lng": 135.1741 },
+    "timetableUrl": "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/",
+    "timetableLinks": [
+      {
+        "label": "大倉山駅 公式時刻表",
+        "url": "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/"
+      }
+    ],
+    "note": "楠キャンパスは大倉山駅から徒歩圏です。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "subway"
+  },
+  {
+    "id": "portliner-minatojima",
+    "name": "みなとじま（キャンパス前）",
+    "mode": "train",
+    "operator": "ポートライナー",
+    "line": "ポートアイランド線",
+    "direction": "三宮方面 / 神戸空港方面",
+    "campus": "その他",
+    "position": { "lat": 34.669046, "lng": 135.210058 },
+    "timetableUrl": "https://www.knt-liner.co.jp/station/p05/",
+    "timetableLinks": [
+      {
+        "label": "みなとじま駅 公式時刻表",
+        "url": "https://www.knt-liner.co.jp/station/p05/"
+      }
+    ],
+    "note": "月次取得データと神戸新交通の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "portliner"
+  },
+  {
+    "id": "portliner-keisan-kagaku-center",
+    "name": "計算科学センター",
+    "mode": "train",
+    "operator": "ポートライナー",
+    "line": "ポートアイランド線",
+    "direction": "三宮方面 / 神戸空港方面",
+    "campus": "その他",
+    "position": { "lat": 34.654782, "lng": 135.22152 },
+    "timetableUrl": "https://www.knt-liner.co.jp/station/p08/",
+    "timetableLinks": [
+      {
+        "label": "計算科学センター駅 公式時刻表",
+        "url": "https://www.knt-liner.co.jp/station/p08/"
+      }
+    ],
+    "note": "月次取得データと神戸新交通の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "portliner"
+  },
+  {
+    "id": "portliner-iryo-center",
+    "name": "医療センター",
+    "mode": "train",
+    "operator": "ポートライナー",
+    "line": "ポートアイランド線",
+    "direction": "三宮方面 / 神戸空港・計算科学センター方面",
+    "campus": "その他",
+    "position": { "lat": 34.658498, "lng": 135.216426 },
+    "timetableUrl": "https://www.knt-liner.co.jp/station/p07/",
+    "timetableLinks": [
+      {
+        "label": "医療センター駅 公式時刻表",
+        "url": "https://www.knt-liner.co.jp/station/p07/"
+      }
+    ],
+    "note": "月次取得データと神戸新交通の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
+    "scheduleKey": "portliner"
+  }
+]

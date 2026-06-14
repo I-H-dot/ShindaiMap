@@ -53,7 +53,7 @@ Google Mapsを表示する場合だけ、`.env.example`を`.env`へコピーし�
 
 ## データ更新
 
-公式地図番号に対応する座標は[`src/data/officialFacilities.ts`](src/data/officialFacilities.ts)で直接管理しています。鉄道時刻表は`npm run scrape:train-timetables`で[`src/data/generated/trainTimetables.ts`](src/data/generated/trainTimetables.ts)を生成します。変更後は`npm run check`を実行してください。データの出典と取り扱いは[`data/README.md`](data/README.md)を参照してください。
+公式地図番号、AED、画像由来POI、交通拠点の座標は`src/data/*.json`で管理し、TypeScript側でアプリ用データへ変換します。鉄道時刻表は`npm run scrape:train-timetables`で[`src/data/generated/trainTimetables.ts`](src/data/generated/trainTimetables.ts)を生成します。変更後は`npm run check`を実行してください。データの出典と取り扱いは[`data/README.md`](data/README.md)を参照してください。
 
 ## 検証
 

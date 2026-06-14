@@ -1,0 +1,1032 @@
+[
+  {
+    "id": "map-rokkodai1-motorcycle-northwest",
+    "name": "六甲台第1 北西バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "六甲台第1",
+    "lat": 34.7300011,
+    "lng": 135.2331854,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 208.4,
+      "y": 445.4
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-motorcycle-west",
+    "name": "六甲台第1 西側バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "六甲台第1",
+    "lat": 34.7295309,
+    "lng": 135.2329648,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 142.8,
+      "y": 558.4
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-motorcycle-south",
+    "name": "六甲台第1 南側バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "六甲台第1",
+    "lat": 34.7272761,
+    "lng": 135.2337034,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 212.1,
+      "y": 1172.3
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-restaurant-south",
+    "name": "六甲台第1 南側レストラン・食堂",
+    "category": "food",
+    "campus": "六甲台第1",
+    "lat": 34.7275179,
+    "lng": 135.2334765,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 174.6,
+      "y": 1099.3
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-office-south",
+    "name": "六甲台第1 南側守衛室",
+    "category": "office",
+    "campus": "六甲台第1",
+    "lat": 34.7272692,
+    "lng": 135.2340011,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 272.2,
+      "y": 1187.2
+    },
+    "transformRmseMeters": 2.29,
+    "note": "深江地区マップ凡例の守衛室記号と同種の青い人物記号に基づく"
+  },
+  {
+    "id": "map-rokkodai1-mailbox-south",
+    "name": "六甲台第1 南側郵便ポスト",
+    "category": "post",
+    "campus": "六甲台第1",
+    "lat": 34.7270064,
+    "lng": 135.2335419,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 170.5,
+      "y": 1235.7
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-stairs-central-west",
+    "name": "六甲台第1 中央西側階段",
+    "category": "stairs",
+    "campus": "六甲台第1",
+    "lat": 34.7285946,
+    "lng": 135.2335938,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 238.0,
+      "y": 824.0
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-stairs-south-central",
+    "name": "六甲台第1 南中央階段",
+    "category": "stairs",
+    "campus": "六甲台第1",
+    "lat": 34.7276524,
+    "lng": 135.2341263,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 312.0,
+      "y": 1092.0
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-stairs-east",
+    "name": "六甲台第1 東側階段",
+    "category": "stairs",
+    "campus": "六甲台第1",
+    "lat": 34.7287398,
+    "lng": 135.235384,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 626.0,
+      "y": 856.0
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-stairs-southeast",
+    "name": "六甲台第1 南東階段",
+    "category": "stairs",
+    "campus": "六甲台第1",
+    "lat": 34.7278122,
+    "lng": 135.235591,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 626.0,
+      "y": 1112.0
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-slope-east-road",
+    "name": "六甲台第1 東側急な傾斜道",
+    "category": "slope",
+    "campus": "六甲台第1",
+    "lat": 34.7294933,
+    "lng": 135.2352281,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 630.0,
+      "y": 650.0
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai1-slope-southwest-road",
+    "name": "六甲台第1 南西急な傾斜道",
+    "category": "slope",
+    "campus": "六甲台第1",
+    "lat": 34.7276412,
+    "lng": 135.233777,
+    "sourceArea": "六甲台第1キャンパスマップ",
+    "sourceImage": "rokkodai1.png",
+    "sourceImagePixel": {
+      "x": 240.0,
+      "y": 1080.0
+    },
+    "transformRmseMeters": 2.29
+  },
+  {
+    "id": "map-rokkodai2-motorcycle-nature-library",
+    "name": "六甲台第2 自然科学系図書館南バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "六甲台第2",
+    "lat": 34.7257909,
+    "lng": 135.2356354,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 3520.0,
+      "y": 2780.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-motorcycle-science-b",
+    "name": "六甲台第2 理学研究科B棟周辺バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "六甲台第2",
+    "lat": 34.7253129,
+    "lng": 135.2355855,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 3430.0,
+      "y": 3160.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-motorcycle-humanities",
+    "name": "六甲台第2 人文学研究科周辺バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "六甲台第2",
+    "lat": 34.7249517,
+    "lng": 135.234373,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 2680.0,
+      "y": 3265.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-shop-engineering-cafeteria",
+    "name": "六甲台第2 工学部食堂周辺売店",
+    "category": "food",
+    "campus": "六甲台第2",
+    "lat": 34.7265057,
+    "lng": 135.237064,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 4459.8,
+      "y": 2455.5
+    },
+    "transformRmseMeters": 6.03,
+    "note": "公式マップの売店記号に基づく"
+  },
+  {
+    "id": "map-rokkodai2-atm-engineering-cafeteria",
+    "name": "六甲台第2 工学部食堂周辺ATM",
+    "category": "atm",
+    "campus": "六甲台第2",
+    "lat": 34.7267794,
+    "lng": 135.2371521,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 4515.5,
+      "y": 2263.1
+    },
+    "transformRmseMeters": 6.03,
+    "note": "公式マップのATM記号に基づく"
+  },
+  {
+    "id": "map-rokkodai2-shop-seven-eleven",
+    "name": "六甲台第2 セブンイレブン",
+    "category": "food",
+    "campus": "六甲台第2",
+    "lat": 34.7263804,
+    "lng": 135.2372174,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 4568.0,
+      "y": 2570.5
+    },
+    "transformRmseMeters": 6.03,
+    "note": "公式マップ上のセブンイレブン記号に基づく"
+  },
+  {
+    "id": "map-rokkodai2-shop-lans-box",
+    "name": "六甲台第2 LANS BOX周辺売店",
+    "category": "food",
+    "campus": "六甲台第2",
+    "lat": 34.724095,
+    "lng": 135.2353061,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 3025.5,
+      "y": 4101.5
+    },
+    "transformRmseMeters": 6.03,
+    "note": "公式マップの売店記号に基づく"
+  },
+  {
+    "id": "map-rokkodai2-mailbox-honbu-kogakubu",
+    "name": "六甲台第2 神大本部工学部前郵便ポスト",
+    "category": "post",
+    "campus": "六甲台第2",
+    "lat": 34.7272141,
+    "lng": 135.235899,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 3771.3,
+      "y": 1626.6
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-stairs-104",
+    "name": "六甲台第2 情報価値創造教育棟北側階段",
+    "category": "stairs",
+    "campus": "六甲台第2",
+    "lat": 34.7254343,
+    "lng": 135.2364893,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 4030.0,
+      "y": 3180.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-stairs-southwest",
+    "name": "六甲台第2 南西階段",
+    "category": "stairs",
+    "campus": "六甲台第2",
+    "lat": 34.7239057,
+    "lng": 135.2335826,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 1970.0,
+      "y": 4070.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-slope-south",
+    "name": "六甲台第2 南側急な傾斜道",
+    "category": "slope",
+    "campus": "六甲台第2",
+    "lat": 34.7241108,
+    "lng": 135.2332756,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 1890.0,
+      "y": 3830.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-rokkodai2-slope-east-104",
+    "name": "六甲台第2 情報価値創造教育棟東側急な傾斜道",
+    "category": "slope",
+    "campus": "六甲台第2",
+    "lat": 34.7252142,
+    "lng": 135.2364574,
+    "sourceArea": "六甲台第2キャンパスマップ",
+    "sourceImage": "rokkodai2.jpg",
+    "sourceImagePixel": {
+      "x": 3990.0,
+      "y": 3340.0
+    },
+    "transformRmseMeters": 6.03
+  },
+  {
+    "id": "map-tsurukabuto1-motorcycle-east",
+    "name": "鶴甲第1 東側バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "鶴甲第1",
+    "lat": 34.7305458,
+    "lng": 135.2374328,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 511.4,
+      "y": 403.9
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-motorcycle-central",
+    "name": "鶴甲第1 中央バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "鶴甲第1",
+    "lat": 34.7297871,
+    "lng": 135.2369796,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 407.3,
+      "y": 519.8
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-motorcycle-southwest",
+    "name": "鶴甲第1 南西バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "鶴甲第1",
+    "lat": 34.7288652,
+    "lng": 135.2361509,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 140.6,
+      "y": 646.1
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-restaurant-central",
+    "name": "鶴甲第1 レストラン・食堂",
+    "category": "food",
+    "campus": "鶴甲第1",
+    "lat": 34.7297926,
+    "lng": 135.2366871,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 309.9,
+      "y": 503.2
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-shop-central",
+    "name": "鶴甲第1 売店",
+    "category": "food",
+    "campus": "鶴甲第1",
+    "lat": 34.7301468,
+    "lng": 135.2368918,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 366.2,
+      "y": 448.9
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-atm-central",
+    "name": "鶴甲第1 中央ATM",
+    "category": "atm",
+    "campus": "鶴甲第1",
+    "lat": 34.7301151,
+    "lng": 135.2367977,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 340.5,
+      "y": 449.6
+    },
+    "transformRmseMeters": 5.86,
+    "note": "公式マップのATM記号に基づく"
+  },
+  {
+    "id": "map-tsurukabuto1-mailbox-north",
+    "name": "鶴甲第1 北側郵便ポスト",
+    "category": "post",
+    "campus": "鶴甲第1",
+    "lat": 34.7326523,
+    "lng": 135.2379104,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 631.0,
+      "y": 49.8
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-stairs-west",
+    "name": "鶴甲第1 西側階段",
+    "category": "stairs",
+    "campus": "鶴甲第1",
+    "lat": 34.7292216,
+    "lng": 135.2362556,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 176.8,
+      "y": 585.1
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto1-stairs-central",
+    "name": "鶴甲第1 中央階段",
+    "category": "stairs",
+    "campus": "鶴甲第1",
+    "lat": 34.7292709,
+    "lng": 135.2367071,
+    "sourceArea": "鶴甲第1キャンパスマップ",
+    "sourceImage": "tsurukabuto1.png",
+    "sourceImagePixel": {
+      "x": 343.8,
+      "y": 601.2
+    },
+    "transformRmseMeters": 5.86
+  },
+  {
+    "id": "map-tsurukabuto2-motorcycle-west",
+    "name": "鶴甲第2 西側バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "鶴甲第2",
+    "lat": 34.7334091,
+    "lng": 135.2329383,
+    "sourceArea": "鶴甲第2キャンパスマップ",
+    "sourceImage": "tsurukabuto2.png",
+    "sourceImagePixel": {
+      "x": 193.6,
+      "y": 369.4
+    },
+    "transformRmseMeters": 6.36
+  },
+  {
+    "id": "map-tsurukabuto2-motorcycle-southwest",
+    "name": "鶴甲第2 南西バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "鶴甲第2",
+    "lat": 34.7326072,
+    "lng": 135.2332024,
+    "sourceArea": "鶴甲第2キャンパスマップ",
+    "sourceImage": "tsurukabuto2.png",
+    "sourceImagePixel": {
+      "x": 210.5,
+      "y": 679.9
+    },
+    "transformRmseMeters": 6.36
+  },
+  {
+    "id": "map-tsurukabuto2-shop-central",
+    "name": "鶴甲第2 売店",
+    "category": "food",
+    "campus": "鶴甲第2",
+    "lat": 34.7335875,
+    "lng": 135.2337021,
+    "sourceArea": "鶴甲第2キャンパスマップ",
+    "sourceImage": "tsurukabuto2.png",
+    "sourceImagePixel": {
+      "x": 358.5,
+      "y": 400.9
+    },
+    "transformRmseMeters": 6.36
+  },
+  {
+    "id": "map-tsurukabuto2-restaurant-central",
+    "name": "鶴甲第2 レストラン・食堂",
+    "category": "food",
+    "campus": "鶴甲第2",
+    "lat": 34.7337192,
+    "lng": 135.2340652,
+    "sourceArea": "鶴甲第2キャンパスマップ",
+    "sourceImage": "tsurukabuto2.png",
+    "sourceImagePixel": {
+      "x": 440.8,
+      "y": 392.5
+    },
+    "transformRmseMeters": 6.36
+  },
+  {
+    "id": "map-tsurukabuto2-mailbox-south",
+    "name": "鶴甲第2 南側郵便ポスト",
+    "category": "post",
+    "campus": "鶴甲第2",
+    "lat": 34.7324072,
+    "lng": 135.2332416,
+    "sourceArea": "鶴甲第2キャンパスマップ",
+    "sourceImage": "tsurukabuto2.png",
+    "sourceImagePixel": {
+      "x": 217.5,
+      "y": 774.6
+    },
+    "transformRmseMeters": 6.36
+  },
+  {
+    "id": "map-tsurukabuto2-stairs-west",
+    "name": "鶴甲第2 西側階段",
+    "category": "stairs",
+    "campus": "鶴甲第2",
+    "lat": 34.732668,
+    "lng": 135.2330741,
+    "sourceArea": "鶴甲第2キャンパスマップ",
+    "sourceImage": "tsurukabuto2.png",
+    "sourceImagePixel": {
+      "x": 184.0,
+      "y": 637.0
+    },
+    "transformRmseMeters": 6.36
+  },
+  {
+    "id": "map-kusunoki-parking-north",
+    "name": "楠 北側駐車場",
+    "category": "parking",
+    "campus": "楠",
+    "lat": 34.6858371,
+    "lng": 135.1703061,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 3634.9,
+      "y": 1861.5
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-parking-west",
+    "name": "楠 西側駐車場",
+    "category": "parking",
+    "campus": "楠",
+    "lat": 34.6851479,
+    "lng": 135.1701831,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 3045.1,
+      "y": 3423.9
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-bicycle-central",
+    "name": "楠 中央駐輪場",
+    "category": "bicycle-parking",
+    "campus": "楠",
+    "lat": 34.6848893,
+    "lng": 135.170849,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 4157.8,
+      "y": 4367.0
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-bicycle-east",
+    "name": "楠 東側駐輪場",
+    "category": "bicycle-parking",
+    "campus": "楠",
+    "lat": 34.6850558,
+    "lng": 135.17173,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 5808.8,
+      "y": 4339.7
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-bicycle-southwest",
+    "name": "楠 南西駐輪場",
+    "category": "bicycle-parking",
+    "campus": "楠",
+    "lat": 34.6843398,
+    "lng": 135.1708052,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 3778.6,
+      "y": 5514.9
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-restaurant-west",
+    "name": "楠 西側レストラン・食堂",
+    "category": "food",
+    "campus": "楠",
+    "lat": 34.6847591,
+    "lng": 135.1701495,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 2771.9,
+      "y": 4287.6
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-shop-west",
+    "name": "楠 西側売店",
+    "category": "food",
+    "campus": "楠",
+    "lat": 34.6848023,
+    "lng": 135.1703075,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 3099.1,
+      "y": 4284.0
+    },
+    "transformRmseMeters": 5.08,
+    "note": "公式マップの売店記号に基づく"
+  },
+  {
+    "id": "map-kusunoki-restaurant-central",
+    "name": "楠 中央レストラン・食堂",
+    "category": "food",
+    "campus": "楠",
+    "lat": 34.6852813,
+    "lng": 135.1706546,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 4006.8,
+      "y": 3401.4
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-shop-familymart",
+    "name": "楠 ファミリーマート",
+    "category": "food",
+    "campus": "楠",
+    "lat": 34.6850751,
+    "lng": 135.1713741,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 5199.0,
+      "y": 4180.0
+    },
+    "transformRmseMeters": 5.08,
+    "note": "公式マップ上のFamilyMart記号に基づく"
+  },
+  {
+    "id": "map-kusunoki-restaurant-east",
+    "name": "楠 東側レストラン・食堂",
+    "category": "food",
+    "campus": "楠",
+    "lat": 34.6853803,
+    "lng": 135.1718551,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 6191.3,
+      "y": 3689.7
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-kusunoki-mailbox-central",
+    "name": "楠 中央郵便ポスト",
+    "category": "post",
+    "campus": "楠",
+    "lat": 34.68501,
+    "lng": 135.170477,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 3531.9,
+      "y": 3915.6
+    },
+    "transformRmseMeters": 5.08,
+    "note": "画像上の郵便ポスト記号中心から変換"
+  },
+  {
+    "id": "map-kusunoki-stairs-south-central",
+    "name": "楠 南中央階段",
+    "category": "stairs",
+    "campus": "楠",
+    "lat": 34.6846724,
+    "lng": 135.1711464,
+    "sourceArea": "楠地区キャンパスマップ",
+    "sourceImage": "kusunoki.png",
+    "sourceImagePixel": {
+      "x": 4580.0,
+      "y": 4950.0
+    },
+    "transformRmseMeters": 5.08
+  },
+  {
+    "id": "map-myodani-bicycle-west",
+    "name": "名谷 西側駐輪場",
+    "category": "bicycle-parking",
+    "campus": "名谷",
+    "lat": 34.6721495,
+    "lng": 135.0979694,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 1377.0,
+      "y": 4040.0
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-bicycle-east",
+    "name": "名谷 東側駐輪場",
+    "category": "bicycle-parking",
+    "campus": "名谷",
+    "lat": 34.6718304,
+    "lng": 135.0993173,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 3519.0,
+      "y": 5094.5
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-restaurant-south",
+    "name": "名谷 南側レストラン・食堂",
+    "category": "food",
+    "campus": "名谷",
+    "lat": 34.6715865,
+    "lng": 135.0985952,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 2167.4,
+      "y": 5435.1
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-shop-south",
+    "name": "名谷 南側売店",
+    "category": "food",
+    "campus": "名谷",
+    "lat": 34.6715948,
+    "lng": 135.0987226,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 2367.5,
+      "y": 5431.6
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-mailbox-east",
+    "name": "名谷 東側郵便ポスト",
+    "category": "post",
+    "campus": "名谷",
+    "lat": 34.6722191,
+    "lng": 135.0994597,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 4077.5,
+      "y": 4488.3
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-stairs-central",
+    "name": "名谷 中央階段",
+    "category": "stairs",
+    "campus": "名谷",
+    "lat": 34.6723783,
+    "lng": 135.098803,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 2800.0,
+      "y": 3880.0
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-stairs-south",
+    "name": "名谷 南側階段",
+    "category": "stairs",
+    "campus": "名谷",
+    "lat": 34.6713684,
+    "lng": 135.0985801,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 2100.0,
+      "y": 5900.0
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-slope-central",
+    "name": "名谷 中央急な傾斜道",
+    "category": "slope",
+    "campus": "名谷",
+    "lat": 34.6722728,
+    "lng": 135.0984478,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 2140.0,
+      "y": 3935.0
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-myodani-slope-south",
+    "name": "名谷 南側急な傾斜道",
+    "category": "slope",
+    "campus": "名谷",
+    "lat": 34.6713405,
+    "lng": 135.0986038,
+    "sourceArea": "名谷地区キャンパスマップ",
+    "sourceImage": "myodani.png",
+    "sourceImagePixel": {
+      "x": 2130.0,
+      "y": 5960.0
+    },
+    "transformRmseMeters": 0.1
+  },
+  {
+    "id": "map-fukae-bicycle-north",
+    "name": "深江 北側駐輪場",
+    "category": "bicycle-parking",
+    "campus": "深江",
+    "lat": 34.7193303,
+    "lng": 135.2890913,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 1768.4,
+      "y": 1829.6
+    },
+    "transformRmseMeters": 4.75
+  },
+  {
+    "id": "map-fukae-bicycle-central",
+    "name": "深江 中央駐輪場",
+    "category": "bicycle-parking",
+    "campus": "深江",
+    "lat": 34.7198462,
+    "lng": 135.2902334,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 2821.1,
+      "y": 1728.3
+    },
+    "transformRmseMeters": 4.75
+  },
+  {
+    "id": "map-fukae-motorcycle-north",
+    "name": "深江 北側バイク駐輪場",
+    "category": "motorcycle-parking",
+    "campus": "深江",
+    "lat": 34.7194831,
+    "lng": 135.2893457,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 2022.0,
+      "y": 1772.5
+    },
+    "transformRmseMeters": 4.75,
+    "note": "公式マップのバイク駐輪場記号に基づく"
+  },
+  {
+    "id": "map-fukae-office-north",
+    "name": "深江 北側守衛室",
+    "category": "office",
+    "campus": "深江",
+    "lat": 34.719251,
+    "lng": 135.2895162,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 2052.3,
+      "y": 2050.4
+    },
+    "transformRmseMeters": 4.75
+  },
+  {
+    "id": "map-fukae-restaurant-west",
+    "name": "深江 西側レストラン・食堂",
+    "category": "food",
+    "campus": "深江",
+    "lat": 34.7183202,
+    "lng": 135.2885697,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 932.3,
+      "y": 2590.1
+    },
+    "transformRmseMeters": 4.75
+  },
+  {
+    "id": "map-fukae-shop-west",
+    "name": "深江 西側売店",
+    "category": "food",
+    "campus": "深江",
+    "lat": 34.7182084,
+    "lng": 135.2886338,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 932.4,
+      "y": 2717.2
+    },
+    "transformRmseMeters": 4.75
+  },
+  {
+    "id": "map-fukae-stairs-central",
+    "name": "深江 中央階段",
+    "category": "stairs",
+    "campus": "深江",
+    "lat": 34.7190527,
+    "lng": 135.2903247,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 2575.0,
+      "y": 2525.0
+    },
+    "transformRmseMeters": 4.75
+  },
+  {
+    "id": "map-fukae-stairs-northwest",
+    "name": "深江 北西階段",
+    "category": "stairs",
+    "campus": "深江",
+    "lat": 34.7195271,
+    "lng": 135.2882748,
+    "sourceArea": "深江地区キャンパスマップ",
+    "sourceImage": "fukae.png",
+    "sourceImagePixel": {
+      "x": 1243.5,
+      "y": 1373.0
+    },
+    "transformRmseMeters": 4.75
+  }
+]

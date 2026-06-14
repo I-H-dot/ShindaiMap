@@ -1,6 +1,12 @@
 import type { CampusName } from "../lib/types";
-import type { TransitStop } from "../lib/transit";
+import type {
+  TransitMode,
+  TransitOperator,
+  TransitSchedule,
+  TransitStop
+} from "../lib/transit";
 import { generatedTrainTimetables } from "./generated/trainTimetables";
+import transitStopRecordsData from "./transitStops.json";
 
 const toMinutes = (time: string) => {
   const [hour, minute] = time.split(":").map(Number);
@@ -156,263 +162,65 @@ const campusPriority: Record<CampusName, string[]> = {
 
 const trainDirectionSchedules = (stopId: string) => generatedTrainTimetables.stops[stopId];
 
-const transitStopSeed = [
-  {
-    id: "citybus-shindai-honbu-kogakubu",
-    name: "神大本部工学部前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "36系統",
-    direction: "阪神御影・JR六甲道方面 / 鶴甲団地方面",
-    campus: "六甲台第2",
-    position: { lat: 34.72696, lng: 135.23431 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/bus/bus-stop-list/bus-119/",
-    note: "アプリ内時刻は36系統の代表的な発車間隔から作った目安です。",
-    schedule: { weekday: bus36Weekday, weekend: bus36Weekend }
-  },
-  {
-    id: "citybus-shindai-main-gate",
-    name: "神大正門前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "36系統",
-    direction: "阪神御影・JR六甲道方面 / 鶴甲団地方面",
-    campus: "六甲台第1",
-    position: { lat: 34.72415, lng: 135.23498 },
-    timetableUrl:
-      "https://www.city.kobe.lg.jp/life/access/transport/bus/jikoku/basjikoku/0360119020.html",
-    note: "アプリ内時刻は36系統の代表的な発車間隔から作った目安です。",
-    schedule: { weekday: bus36Weekday, weekend: bus36Weekend }
-  },
-  {
-    id: "citybus-kokusai-bunka",
-    name: "神大国際文化学研究科前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "16・106系統",
-    direction: "阪神御影方面 / 六甲ケーブル下方面",
-    campus: "鶴甲第1",
-    position: { lat: 34.73009, lng: 135.22924 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/bus/bus-stop-list/bus-129/",
-    note: "一部便は曜日・大学休校日で運行条件が変わります。公式時刻表を確認してください。",
-    schedule: { weekday: bus16Weekday, weekend: bus16Weekend }
-  },
-  {
-    id: "citybus-hattatsu-kagaku",
-    name: "神大人間発達環境学研究科前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "16・106系統",
-    direction: "阪神御影方面 / 六甲ケーブル下方面",
-    campus: "鶴甲第2",
-    position: { lat: 34.72622, lng: 135.22603 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/search-ktb/timetable/",
-    note: "停留所名で検索して最新の公式時刻表を確認してください。",
-    schedule: { weekday: bus16Weekday, weekend: bus16Weekend }
-  },
-  {
-    id: "citybus-daigaku-byoin",
-    name: "大学病院前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "9・110・112系統ほか",
-    direction: "三宮・神戸駅方面",
-    campus: "楠",
-    position: { lat: 34.68556, lng: 135.17052 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/search-ktb/timetable/",
-    note: "行先が複数あります。公式検索で目的地方面を選んでください。",
-    schedule: { weekday: localBusWeekday, weekend: localBusWeekend }
-  },
-  {
-    id: "citybus-fukae-campus",
-    name: "深江駅前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "東灘区方面",
-    direction: "阪神深江・東灘方面",
-    campus: "深江",
-    position: { lat: 34.72261, lng: 135.29156 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/search-ktb/timetable/",
-    note: "深江キャンパス周辺のバスは便数が限られるため、鉄道も合わせて確認してください。",
-    schedule: { weekday: localBusWeekday, weekend: localBusWeekend }
-  },
-  {
-    id: "citybus-myodani",
-    name: "名谷駅前",
-    mode: "bus",
-    operator: "神戸市バス",
-    line: "15系統ほか",
-    direction: "名谷駅前発着",
-    campus: "名谷",
-    position: { lat: 34.67935, lng: 135.09461 },
-    timetableUrl:
-      "https://www.city.kobe.lg.jp/life/access/transport/bus/jikoku/basjikoku/0150643020.html",
-    note: "行先が複数あります。公式検索で目的地方面を選んでください。",
-    schedule: { weekday: localBusWeekday, weekend: localBusWeekend }
-  },
-  {
-    id: "jr-rokkomichi",
-    name: "六甲道",
-    mode: "train",
-    operator: "JR",
-    line: "JR神戸線",
-    direction: "尼崎・大阪・京都方面 / 三ノ宮・姫路方面",
-    campus: "六甲台第2",
-    position: { lat: 34.71458, lng: 135.23843 },
-    timetableUrl: "https://eki.jr-odekake.net/top?id=0610140",
-    timetableLinks: [
-      {
-        label: "尼崎・大阪・京都方面",
-        direction: "尼崎・大阪・京都方面",
-        url: "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=1&MD=3"
-      },
-      {
-        label: "三ノ宮・姫路方面",
-        direction: "三ノ宮・姫路方面",
-        url: "https://timetable.jr-odekake.net/cgi-bin/mydia_sp.cgi?EID=0610140&FN=0&MD=3"
-      }
-    ],
-    note: "月次取得データとJRおでかけネットのリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: jrWeekday, weekend: jrWeekend },
-    directionSchedules: trainDirectionSchedules("jr-rokkomichi")
-  },
-  {
-    id: "hankyu-rokko",
-    name: "六甲",
-    mode: "train",
-    operator: "阪急電鉄",
-    line: "神戸線",
-    direction: "大阪梅田・西宮北口方面 / 神戸三宮・新開地方面",
-    campus: "六甲台第1",
-    position: { lat: 34.71968, lng: 135.23372 },
-    timetableUrl: "https://www.hankyu.co.jp/station/rokko.html",
-    timetableLinks: [
-      {
-        label: "大阪梅田・西宮北口方面 平日",
-        direction: "大阪梅田・西宮北口方面",
-        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_1_w.html"
-      },
-      {
-        label: "大阪梅田・西宮北口方面 土休日",
-        direction: "大阪梅田・西宮北口方面",
-        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_1_h.html"
-      },
-      {
-        label: "神戸三宮・新開地方面 平日",
-        direction: "神戸三宮・新開地方面",
-        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_2_w.html"
-      },
-      {
-        label: "神戸三宮・新開地方面 土休日",
-        direction: "神戸三宮・新開地方面",
-        url: "https://www.hankyu.co.jp/station/html/HK-13_ko_2_h.html"
-      }
-    ],
-    note: "月次取得データと阪急電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: hankyuWeekday, weekend: hankyuWeekend },
-    directionSchedules: trainDirectionSchedules("hankyu-rokko")
-  },
-  {
-    id: "hanshin-mikage",
-    name: "御影",
-    mode: "train",
-    operator: "阪神電鉄",
-    line: "阪神本線",
-    direction: "大阪梅田・尼崎方面 / 高速神戸・山陽姫路方面",
-    campus: "六甲台第2",
-    position: { lat: 34.71471, lng: 135.2555 },
-    timetableUrl: "https://www.hanshin.co.jp/station/mikage.html",
-    timetableLinks: [
-      {
-        label: "御影駅 公式時刻表",
-        url: "https://www.hanshin.co.jp/station/mikage.html"
-      }
-    ],
-    note: "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend },
-    directionSchedules: trainDirectionSchedules("hanshin-mikage")
-  },
-  {
-    id: "hanshin-fukae",
-    name: "深江",
-    mode: "train",
-    operator: "阪神電鉄",
-    line: "阪神本線",
-    direction: "大阪梅田・尼崎方面 / 高速神戸・御影方面",
-    campus: "深江",
-    position: { lat: 34.72252, lng: 135.29184 },
-    timetableUrl: "https://www.hanshin.co.jp/station/fukae.html",
-    timetableLinks: [
-      {
-        label: "深江駅 公式時刻表",
-        url: "https://www.hanshin.co.jp/station/fukae.html"
-      }
-    ],
-    note: "月次取得データと阪神電鉄の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: hanshinWeekday, weekend: hanshinWeekend },
-    directionSchedules: trainDirectionSchedules("hanshin-fukae")
-  },
-  {
-    id: "subway-myodani",
-    name: "名谷",
-    mode: "train",
-    operator: "神戸市営地下鉄",
-    line: "西神・山手線",
-    direction: "谷上・新神戸方面 / 西神中央方面",
-    campus: "名谷",
-    position: { lat: 34.67919, lng: 135.09443 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/",
-    timetableLinks: [
-      {
-        label: "名谷駅 公式時刻表",
-        url: "https://kotsu.city.kobe.lg.jp/subway/timetable1/myodani/"
-      }
-    ],
-    note: "月次取得データと神戸市交通局の駅時刻表リンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: subwayWeekday, weekend: subwayWeekend },
-    directionSchedules: trainDirectionSchedules("subway-myodani")
-  },
-  {
-    id: "subway-okurayama",
-    name: "大倉山",
-    mode: "train",
-    operator: "神戸市営地下鉄",
-    line: "西神・山手線",
-    direction: "谷上・新神戸方面 / 西神中央方面",
-    campus: "楠",
-    position: { lat: 34.68404, lng: 135.1741 },
-    timetableUrl: "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/",
-    timetableLinks: [
-      {
-        label: "大倉山駅 公式時刻表",
-        url: "https://kotsu.city.kobe.lg.jp/subway/timetable1/okurayama/"
-      }
-    ],
-    note: "楠キャンパスは大倉山駅から徒歩圏です。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: subwayWeekday, weekend: subwayWeekend },
-    directionSchedules: trainDirectionSchedules("subway-okurayama")
-  },
-  {
-    id: "portliner-minatojima",
-    name: "みなとじま（キャンパス前）",
-    mode: "train",
-    operator: "ポートライナー",
-    line: "ポートアイランド線",
-    direction: "三宮方面 / 神戸空港方面",
-    campus: "その他",
-    position: { lat: 34.66686, lng: 135.21136 },
-    timetableUrl: "https://www.knt-liner.co.jp/station/804/",
-    timetableLinks: [
-      {
-        label: "みなとじま駅 公式時刻表",
-        url: "https://www.knt-liner.co.jp/station/804/"
-      }
-    ],
-    note: "月次取得データと神戸新交通の駅ページリンクを表示します。最新の臨時変更は公式時刻表を確認してください。",
-    schedule: { weekday: portlinerWeekday, weekend: portlinerWeekend },
-    directionSchedules: trainDirectionSchedules("portliner-minatojima")
-  }
-] satisfies TransitStop[];
+type TransitScheduleKey =
+  | "bus36"
+  | "bus16"
+  | "localBus"
+  | "jr"
+  | "hankyu"
+  | "hanshin"
+  | "subway"
+  | "portliner";
+
+interface TransitStopRecord {
+  id: string;
+  name: string;
+  mode: TransitMode;
+  operator: TransitOperator;
+  line: string;
+  direction: string;
+  campus: CampusName;
+  position: { lat: number; lng: number };
+  timetableUrl: string;
+  timetableLinks?: Array<{
+    label: string;
+    url: string;
+    direction?: string;
+  }>;
+  note: string;
+  scheduleKey: TransitScheduleKey;
+}
+
+const transitStopRecords = transitStopRecordsData as TransitStopRecord[];
+
+const transitScheduleMap: Record<TransitScheduleKey, TransitSchedule> = {
+  bus36: { weekday: bus36Weekday, weekend: bus36Weekend },
+  bus16: { weekday: bus16Weekday, weekend: bus16Weekend },
+  localBus: { weekday: localBusWeekday, weekend: localBusWeekend },
+  jr: { weekday: jrWeekday, weekend: jrWeekend },
+  hankyu: { weekday: hankyuWeekday, weekend: hankyuWeekend },
+  hanshin: { weekday: hanshinWeekday, weekend: hanshinWeekend },
+  subway: { weekday: subwayWeekday, weekend: subwayWeekend },
+  portliner: { weekday: portlinerWeekday, weekend: portlinerWeekend }
+};
+
+const transitStopSeed = transitStopRecords.map((record): TransitStop => ({
+  id: record.id,
+  name: record.name,
+  mode: record.mode,
+  operator: record.operator,
+  line: record.line,
+  direction: record.direction,
+  campus: record.campus,
+  position: record.position,
+  timetableUrl: record.timetableUrl,
+  timetableLinks: record.timetableLinks,
+  note: record.note,
+  schedule: transitScheduleMap[record.scheduleKey],
+  ...(record.mode === "train"
+    ? { directionSchedules: trainDirectionSchedules(record.id) }
+    : {})
+}));
 
 export const transitStops: TransitStop[] = [...transitStopSeed].sort((a, b) => {
   const aPriority = campusPriority[a.campus].indexOf(a.id);

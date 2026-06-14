@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { categories } from "../src/data/categories";
+import { generatedTrainTimetables } from "../src/data/generated/trainTimetables";
 import { officialFacilities } from "../src/data/officialFacilities";
 import { facilities } from "../src/data/facilities";
+import { transitStops } from "../src/data/transit";
 import type { FacilityCategory } from "../src/lib/types";
 
 describe("seed data", () => {
@@ -10,21 +12,29 @@ describe("seed data", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("covers all core facility categories", () => {
+  it("defines every category used by the generated facility data", () => {
     const categoryIds = new Set(categories.map((category) => category.id));
     const usedCategoryIds = new Set(facilities.map((facility) => facility.category));
 
     const requiredCategories: FacilityCategory[] = [
-      "toilet",
-      "bench",
-      "learning",
-      "library",
-      "classroom",
-      "route",
-      "atm",
+      "aed",
+      "bicycle-parking",
+      "motorcycle-parking",
+      "parking",
+      "stairs",
+      "slope",
       "post",
-      "bus"
+      "bus",
+      "station",
+      "food",
+      "atm",
+      "official",
+      "office"
     ];
+
+    for (const used of usedCategoryIds) {
+      expect(categoryIds.has(used)).toBe(true);
+    }
 
     for (const required of requiredCategories) {
       expect(categoryIds.has(required)).toBe(true);
@@ -32,8 +42,24 @@ describe("seed data", () => {
     }
   });
 
+  it("does not include legacy local seed-only map pins", () => {
+    const unsupportedSourcePatterns = [
+      "Local seed data",
+      "local seed data",
+      "public campus map seed",
+      "map seed"
+    ];
+
+    for (const facility of facilities) {
+      expect(
+        unsupportedSourcePatterns.some((pattern) => facility.source.includes(pattern)),
+        `${facility.id} should come from official JSON/image/AED/transit data`
+      ).toBe(false);
+    }
+  });
+
   it("loads official map pins from the static coordinate data", () => {
-    expect(officialFacilities).toHaveLength(218);
+    expect(officialFacilities).toHaveLength(161);
     expect(facilities.length).toBeGreaterThan(officialFacilities.length);
     expect(facilities.some((facility) => facility.category === "official")).toBe(true);
 
@@ -47,16 +73,188 @@ describe("seed data", () => {
     }
   });
 
-  it("uses the static coordinate and official number for matched featured places", () => {
-    const socialScienceLibrary = facilities.find(
-      (facility) => facility.id === "rokkodai-social-library"
+  it("covers the official numbered facilities in the requested campus maps", () => {
+    const range = (start: number, end: number) =>
+      Array.from({ length: end - start + 1 }, (_, index) => String(start + index));
+
+    const expectedBySource = new Map([
+      ["六甲台第1キャンパス", range(26, 42)],
+      ["六甲台第2キャンパス", [...range(43, 67), "68-1", "68-2", ...range(69, 104)]],
+      ["鶴甲第1キャンパス", range(10, 25)],
+      ["鶴甲第2キャンパス", range(1, 9)],
+      ["楠キャンパス", range(1, 14)],
+      ["名谷キャンパス", range(1, 7)],
+      ["深江キャンパス", range(1, 28)]
+    ]);
+
+    for (const [sourceArea, expectedNumbers] of expectedBySource) {
+      const actualNumbers = officialFacilities
+        .filter((facility) => facility.sourceArea === sourceArea)
+        .map((facility) => facility.officialMapNumber)
+        .sort((a, b) => expectedNumbers.indexOf(a || "") - expectedNumbers.indexOf(b || ""));
+
+      expect(actualNumbers).toEqual(expectedNumbers);
+    }
+  });
+
+  it("maps every generated train timetable stop to a station pin", () => {
+    const generatedStopIds = Object.keys(generatedTrainTimetables.stops);
+    const trainStopIds = new Set(
+      transitStops
+        .filter((stop) => stop.mode === "train")
+        .map((stop) => stop.id)
+    );
+    const stationFacilities = new Map(
+      facilities
+        .filter((facility) => facility.category === "station")
+        .map((facility) => [facility.id, facility])
     );
 
-    expect(socialScienceLibrary?.officialMapNumber).toBe("32");
-    expect(socialScienceLibrary?.position).toEqual({
-      lat: 34.729193,
-      lng: 135.2340875
+    for (const stopId of generatedStopIds) {
+      expect(trainStopIds.has(stopId)).toBe(true);
+      const facility = stationFacilities.get(`station-${stopId}`);
+      expect(facility).toBeDefined();
+      expect(Number.isFinite(facility?.position.lat)).toBe(true);
+      expect(Number.isFinite(facility?.position.lng)).toBe(true);
+      expect(facility?.links?.some((link) => link.label.includes("時刻表"))).toBe(true);
+    }
+  });
+
+  it("maps every transit stop to a map pin", () => {
+    const facilityIds = new Set(facilities.map((facility) => facility.id));
+
+    for (const stop of transitStops) {
+      const expectedId = stop.mode === "train" ? `station-${stop.id}` : `bus-${stop.id}`;
+      expect(facilityIds.has(expectedId)).toBe(true);
+    }
+  });
+
+  it("loads AED locations from the static coordinate data", () => {
+    const aedFacilities = facilities.filter((facility) => facility.category === "aed");
+
+    const aedCountsByCampus = new Map<string, number>();
+    for (const facility of aedFacilities) {
+      aedCountsByCampus.set(facility.campus, (aedCountsByCampus.get(facility.campus) || 0) + 1);
+    }
+
+    expect(aedFacilities).toHaveLength(37);
+    expect(Object.fromEntries([...aedCountsByCampus.entries()].sort())).toEqual({
+      六甲台第1: 5,
+      六甲台第2: 13,
+      名谷: 3,
+      深江: 5,
+      鶴甲第1: 7,
+      鶴甲第2: 4
     });
+
+    for (const facility of aedFacilities) {
+      expect(facility.links?.some((link) => link.url.includes("aed_all_20240324.pdf"))).toBe(true);
+      expect(Number.isFinite(facility.position.lat)).toBe(true);
+      expect(Number.isFinite(facility.position.lng)).toBe(true);
+      expect(facility.tags).toContain("AED");
+    }
+  });
+
+  it("loads image-derived official map feature pins", () => {
+    const mapFeatureFacilities = facilities.filter((facility) =>
+      facility.source.includes("official campus map image")
+    );
+    const categories = new Set(mapFeatureFacilities.map((facility) => facility.category));
+
+    expect(mapFeatureFacilities).toHaveLength(68);
+    expect(categories.has("bicycle-parking")).toBe(true);
+    expect(categories.has("motorcycle-parking")).toBe(true);
+    expect(categories.has("parking")).toBe(true);
+    expect(categories.has("food")).toBe(true);
+    expect(categories.has("post")).toBe(true);
+    expect(categories.has("atm")).toBe(true);
+    expect(categories.has("stairs")).toBe(true);
+    expect(categories.has("slope")).toBe(true);
+
+    for (const facility of mapFeatureFacilities) {
+      expect(Number.isFinite(facility.position.lat)).toBe(true);
+      expect(Number.isFinite(facility.position.lng)).toBe(true);
+      expect(facility.description).toContain("制御点RMSE");
+    }
+  });
+
+  it("covers the requested map feature categories by district", () => {
+    const hasCategoryInCampuses = (
+      category: FacilityCategory,
+      campuses: string[]
+    ) =>
+      facilities.some(
+        (facility) => facility.category === category && campuses.includes(facility.campus)
+      );
+
+    const districtRequirements: Array<{
+      label: string;
+      campuses: string[];
+      categories: FacilityCategory[];
+    }> = [
+      {
+        label: "六甲台地区",
+        campuses: ["六甲台第1", "六甲台第2", "鶴甲第1", "鶴甲第2"],
+        categories: [
+          "motorcycle-parking",
+          "food",
+          "post",
+          "atm",
+          "stairs",
+          "slope",
+          "office",
+          "bus",
+          "aed"
+        ]
+      },
+      {
+        label: "楠地区",
+        campuses: ["楠"],
+        categories: [
+          "bicycle-parking",
+          "parking",
+          "food",
+          "post",
+          "stairs",
+          "bus"
+        ]
+      },
+      {
+        label: "名谷地区",
+        campuses: ["名谷"],
+        categories: [
+          "bus",
+          "stairs",
+          "slope",
+          "bicycle-parking",
+          "food",
+          "post",
+          "aed"
+        ]
+      },
+      {
+        label: "深江地区",
+        campuses: ["深江"],
+        categories: [
+          "bus",
+          "bicycle-parking",
+          "office",
+          "motorcycle-parking",
+          "food",
+          "stairs",
+          "aed"
+        ]
+      }
+    ];
+
+    for (const requirement of districtRequirements) {
+      for (const category of requirement.categories) {
+        expect(
+          hasCategoryInCampuses(category, requirement.campuses),
+          `${requirement.label} should include ${category}`
+        ).toBe(true);
+      }
+    }
   });
 
 });

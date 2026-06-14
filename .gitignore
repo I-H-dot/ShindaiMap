@@ -6,6 +6,7 @@
 /dist/
 /.astro/
 /.playwright-cli/
+/.cache/
 
 # Environment files
 .env

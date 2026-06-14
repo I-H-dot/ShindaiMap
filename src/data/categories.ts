@@ -2,52 +2,52 @@ import type { CategoryDefinition } from "../lib/types";
 
 export const categories: CategoryDefinition[] = [
   {
-    id: "toilet",
-    label: "トイレ",
-    shortLabel: "トイレ",
-    description: "講義前後に使いやすいトイレ、バリアフリー設備の目印。",
-    color: "#2563eb",
-    icon: "accessibility"
-  },
-  {
-    id: "bench",
-    label: "休憩場所",
-    shortLabel: "休憩",
-    description: "空きコマや移動待ちで使える休憩場所。",
-    color: "#16a34a",
-    icon: "armchair"
-  },
-  {
-    id: "learning",
-    label: "ラーコモ・自習",
-    shortLabel: "ラーコモ",
-    description: "ラーニングコモンズ、自習、グループワーク向けスペース。",
-    color: "#7c3aed",
-    icon: "book-open"
-  },
-  {
-    id: "library",
-    label: "図書館",
-    shortLabel: "図書館",
-    description: "各キャンパスの図書館と資料室。",
+    id: "aed",
+    label: "AED",
+    shortLabel: "AED",
+    description: "公式AED設置場所一覧に基づく建物代表位置。",
     color: "#dc2626",
-    icon: "library"
+    icon: "heart-pulse"
   },
   {
-    id: "classroom",
-    label: "教室・建物",
-    shortLabel: "教室",
-    description: "号館、講義室、教室配置の手がかり。",
-    color: "#ea580c",
-    icon: "building-2"
+    id: "bicycle-parking",
+    label: "駐輪場",
+    shortLabel: "駐輪場",
+    description: "公式キャンパスマップ画像に示された自転車駐輪場。",
+    color: "#4f46e5",
+    icon: "bicycle"
   },
   {
-    id: "route",
-    label: "入口・移動目印",
-    shortLabel: "入口",
-    description: "門、入口、キャンパス間移動で目印になる場所。",
-    color: "#0891b2",
-    icon: "route"
+    id: "motorcycle-parking",
+    label: "バイク駐輪場",
+    shortLabel: "バイク",
+    description: "公式キャンパスマップ画像に示されたバイク駐輪場。",
+    color: "#4338ca",
+    icon: "motorcycle"
+  },
+  {
+    id: "parking",
+    label: "駐車場",
+    shortLabel: "駐車場",
+    description: "公式キャンパスマップ画像に示された駐車場。",
+    color: "#64748b",
+    icon: "square-parking"
+  },
+  {
+    id: "stairs",
+    label: "階段",
+    shortLabel: "階段",
+    description: "公式キャンパスマップ画像に示された階段。",
+    color: "#6b7280",
+    icon: "stairs"
+  },
+  {
+    id: "slope",
+    label: "急な傾斜道",
+    shortLabel: "傾斜道",
+    description: "公式キャンパスマップ画像に示された急な傾斜道。",
+    color: "#57534e",
+    icon: "triangle-exclamation"
   },
   {
     id: "atm",
@@ -74,12 +74,28 @@ export const categories: CategoryDefinition[] = [
     icon: "bus"
   },
   {
+    id: "station",
+    label: "鉄道駅",
+    shortLabel: "駅",
+    description: "アプリ内時刻表を表示する鉄道駅。",
+    color: "#0369a1",
+    icon: "train"
+  },
+  {
     id: "food",
     label: "食堂・売店",
     shortLabel: "食堂",
     description: "食堂、カフェ、生協ショップ。",
     color: "#c2410c",
     icon: "utensils"
+  },
+  {
+    id: "office",
+    label: "守衛室・窓口",
+    shortLabel: "守衛",
+    description: "守衛室、門衛所、案内窓口。",
+    color: "#475569",
+    icon: "building-2"
   },
   {
     id: "official",
