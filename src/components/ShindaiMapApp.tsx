@@ -1,4 +1,3 @@
-import Fuse from "fuse.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -55,6 +54,7 @@ import type {
   FacilityCategory,
   LatLng
 } from "../lib/types";
+import { countFacilitiesByCategory, searchFacilities } from "../lib/search";
 import { withBasePath } from "../lib/urls";
 import UiTuneKit from "./UiTuneKit";
 
@@ -526,26 +526,6 @@ const isCampusViewportFacility = (facility: Facility) => {
   return lat >= 34.55 && lat <= 34.78 && lng >= 135.05 && lng <= 135.32;
 };
 
-const useUrlInitialSelection = (
-  facilities: Facility[],
-  setSelectedId: (id: string) => void,
-  setSelectedCategories: (categories: Set<FacilityCategory>) => void
-) => {
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const facilityId = params.get("facility");
-    const categoryId = params.get("category") as FacilityCategory | null;
-
-    if (facilityId && facilities.some((facility) => facility.id === facilityId)) {
-      setSelectedId(facilityId);
-    }
-
-    if (categoryId && categoryMap.has(categoryId)) {
-      setSelectedCategories(new Set([categoryId]));
-    }
-  }, [facilities, setSelectedCategories, setSelectedId]);
-};
-
 export default function ShindaiMapApp({
   initialFacilities,
   categories,
@@ -561,7 +541,7 @@ export default function ShindaiMapApp({
   const [selectedCategories, setSelectedCategories] = useState(
     () => new Set<FacilityCategory>(allCategoryIds)
   );
-  const [selectedId, setSelectedId] = useState(initialFacilities[0]?.id || "");
+  const [selectedId, setSelectedId] = useState("");
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [navigationState, setNavigationState] = useState<NavigationState | null>(null);
@@ -580,6 +560,7 @@ export default function ShindaiMapApp({
   const [mobilePanelState, setMobilePanelState] =
     useState<MobilePanelState>("expanded");
   const [isMobileViewportActive, setIsMobileViewportActive] = useState(false);
+  const [urlStateReady, setUrlStateReady] = useState(false);
   const isMobilePanelClosed = isMobileViewportActive && mobilePanelState === "closed";
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -623,7 +604,41 @@ export default function ShindaiMapApp({
     });
   };
 
-  useUrlInitialSelection(facilities, setSelectedId, setSelectedCategories);
+  const campusNames = useMemo(
+    () => Object.keys(campusCenters) as CampusName[],
+    [campusCenters]
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryParam = params.get("query");
+    const campusParam = params.get("campus");
+    const categoryParam = params.get("category");
+    const facilityId = params.get("facility");
+
+    if (queryParam !== null) {
+      setQuery(queryParam);
+    }
+
+    if (campusParam === "all" || campusNames.includes(campusParam as CampusName)) {
+      setCampus(campusParam as CampusName | "all");
+    }
+
+    if (categoryParam) {
+      const categoryIds = categoryParam
+        .split(",")
+        .filter((id): id is FacilityCategory => categoryMap.has(id as FacilityCategory));
+      if (categoryIds.length > 0) {
+        setSelectedCategories(new Set(categoryIds));
+      }
+    }
+
+    if (facilityId && facilities.some((facility) => facility.id === facilityId)) {
+      setSelectedId(facilityId);
+    }
+
+    setUrlStateReady(true);
+  }, [campusNames, facilities]);
 
   useEffect(() => {
     voiceGuidanceEnabledRef.current = voiceGuidanceEnabled;
@@ -713,44 +728,14 @@ export default function ShindaiMapApp({
     };
   }, []);
 
-  const campusNames = useMemo(
-    () => Object.keys(campusCenters) as CampusName[],
-    [campusCenters]
-  );
-
-  const fuse = useMemo(
-    () =>
-      new Fuse(facilities, {
-        threshold: 0.34,
-        ignoreLocation: true,
-        keys: [
-          "name",
-          "campus",
-          "area",
-          "aliases",
-          "tags",
-          "building",
-          "roomExamples",
-          "officialMapNumber",
-          "sourceArea"
-        ]
-      }),
-    [facilities]
-  );
-
-  const searchedFacilities = useMemo(() => {
-    const trimmed = query.trim();
-    if (!trimmed) return facilities;
-    return fuse.search(trimmed).map((result) => result.item);
-  }, [facilities, fuse, query]);
-
   const filteredFacilities = useMemo(
     () =>
-      searchedFacilities.filter((facility) => {
-        if (campus !== "all" && facility.campus !== campus) return false;
-        return selectedCategories.has(facility.category);
+      searchFacilities(facilities, {
+        query,
+        campus,
+        categories: selectedCategories
       }),
-    [campus, searchedFacilities, selectedCategories]
+    [campus, facilities, query, selectedCategories]
   );
 
   const selectedFacility =
@@ -778,19 +763,99 @@ export default function ShindaiMapApp({
     return localFacilities.length > 0 ? localFacilities : mapFacilities;
   }, [mapFacilities]);
 
-  const countsByCategory = useMemo(() => {
-    const counts = new Map<FacilityCategory, number>();
-    for (const facility of facilities) {
-      if (campus !== "all" && facility.campus !== campus) continue;
-      counts.set(facility.category, (counts.get(facility.category) || 0) + 1);
-    }
-    return counts;
-  }, [campus, facilities]);
+  const countsByCategory = useMemo(
+    () => countFacilitiesByCategory(facilities, campus),
+    [campus, facilities]
+  );
 
   const categoryOptions = useMemo(
     () => categories.filter((category) => (countsByCategory.get(category.id) || 0) > 0),
     [categories, countsByCategory]
   );
+
+  const filteredCountsByCategory = useMemo(
+    () => countFacilitiesByCategory(filteredFacilities, "all"),
+    [filteredFacilities]
+  );
+
+  const visibleCategorySummary = useMemo(() => {
+    const summaries = categories
+      .map((category) => ({
+        category,
+        count: filteredCountsByCategory.get(category.id) || 0
+      }))
+      .filter(({ count }) => count > 0)
+      .sort(
+        (a, b) =>
+          b.count - a.count || a.category.label.localeCompare(b.category.label, "ja")
+      )
+      .slice(0, 3)
+      .map(({ category, count }) => `${category.shortLabel}${count}件`);
+
+    return summaries.join("、");
+  }, [categories, filteredCountsByCategory]);
+
+  const resultSummaryText =
+    filteredFacilities.length === 0
+      ? "表示中: 0件"
+      : `表示中: ${filteredFacilities.length}件${
+          visibleCategorySummary ? `、${visibleCategorySummary}` : ""
+        }`;
+
+  useEffect(() => {
+    if (!urlStateReady) return;
+
+    const url = new URL(window.location.href);
+    const trimmedQuery = query.trim();
+    const allCategoriesSelected =
+      selectedCategories.size === allCategoryIds.length &&
+      allCategoryIds.every((categoryId) => selectedCategories.has(categoryId));
+
+    if (trimmedQuery) {
+      url.searchParams.set("query", trimmedQuery);
+    } else {
+      url.searchParams.delete("query");
+    }
+
+    if (campus === "all") {
+      url.searchParams.delete("campus");
+    } else {
+      url.searchParams.set("campus", campus);
+    }
+
+    if (allCategoriesSelected) {
+      url.searchParams.delete("category");
+    } else {
+      const categoryIds = allCategoryIds.filter((categoryId) =>
+        selectedCategories.has(categoryId)
+      );
+      if (categoryIds.length > 0) {
+        url.searchParams.set("category", categoryIds.join(","));
+      } else {
+        url.searchParams.delete("category");
+      }
+    }
+
+    if (selectedId && facilities.some((facility) => facility.id === selectedId)) {
+      url.searchParams.set("facility", selectedId);
+    } else {
+      url.searchParams.delete("facility");
+    }
+
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, [
+    allCategoryIds,
+    campus,
+    facilities,
+    query,
+    selectedCategories,
+    selectedId,
+    urlStateReady
+  ]);
 
   const focusMapOnFacility = (facility: Facility, zoom = FOCUSED_FACILITY_ZOOM) => {
     const map = googleMapRef.current;
@@ -825,10 +890,6 @@ export default function ShindaiMapApp({
     if (options?.zoomMap) {
       focusMapOnFacility(facility);
     }
-
-    const url = new URL(window.location.href);
-    url.searchParams.set("facility", facility.id);
-    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   };
 
   const toggleMobilePanel = () => {
@@ -2012,7 +2073,10 @@ export default function ShindaiMapApp({
               <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
               <input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setSelectedId("");
+                }}
                 placeholder="施設・教室を検索"
                 aria-label="施設や教室を検索"
               />
@@ -2077,6 +2141,10 @@ export default function ShindaiMapApp({
             className="mobile-transit-card"
           />
         </section>
+
+        <p className="result-summary" role="status" aria-live="polite">
+          {resultSummaryText}
+        </p>
 
         {selectedFacility && (
           <section
@@ -2326,33 +2394,40 @@ export default function ShindaiMapApp({
                 Google Maps APIキー未設定でも、検索・フィルタ・施設情報・外部地図リンクは確認できます。
               </span>
             </div>
-            {mapBoundsFacilities.map((facility) => {
-              const icon = icons[getCategory(facility.category)?.icon || "map-pin"] || faMapPin;
-              return (
-                <button
-                  key={facility.id}
-                  type="button"
-                  className={`fallback-pin ${
-                    facility.id === selectedFacility?.id ? "is-active" : ""
-                  }`}
-                  style={
-                    {
-                      ...getFallbackPosition(facility, mapBoundsFacilities),
-                      "--facility-color": categoryColor(facility)
-                    } as React.CSSProperties
-                  }
-                  onClick={() => selectFacility(facility, { zoomMap: true })}
-                  title={facility.name}
-                  aria-label={facility.name}
-                >
-                  {facility.officialMapNumber ? (
-                    <span className="pin-number">{facility.officialMapNumber}</span>
-                  ) : (
-                    <FontAwesomeIcon icon={icon} />
-                  )}
-                </button>
-              );
-            })}
+            {mapBoundsFacilities.length > 0 ? (
+              mapBoundsFacilities.map((facility) => {
+                const icon = icons[getCategory(facility.category)?.icon || "map-pin"] || faMapPin;
+                return (
+                  <button
+                    key={facility.id}
+                    type="button"
+                    className={`fallback-pin ${
+                      facility.id === selectedFacility?.id ? "is-active" : ""
+                    }`}
+                    style={
+                      {
+                        ...getFallbackPosition(facility, mapBoundsFacilities),
+                        "--facility-color": categoryColor(facility)
+                      } as React.CSSProperties
+                    }
+                    onClick={() => selectFacility(facility, { zoomMap: true })}
+                    title={facility.name}
+                    aria-label={facility.name}
+                  >
+                    {facility.officialMapNumber ? (
+                      <span className="pin-number">{facility.officialMapNumber}</span>
+                    ) : (
+                      <FontAwesomeIcon icon={icon} />
+                    )}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="fallback-empty-state" role="status">
+                <strong>該当する施設がありません</strong>
+                <span>検索語、キャンパス、カテゴリを変更してください。</span>
+              </div>
+            )}
           </div>
         )}
         {isNavigationMode && navigationState && (
