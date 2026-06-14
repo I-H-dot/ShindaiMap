@@ -534,6 +534,115 @@ const isCampusViewportFacility = (facility: Facility) => {
   return lat >= 34.55 && lat <= 34.78 && lng >= 135.05 && lng <= 135.32;
 };
 
+const LOCATION_REQUEST_OPTIONS: PositionOptions[] = [
+  { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
+  { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+];
+
+const LOCATION_WATCH_TIMEOUT_MS = 10000;
+const GEOLOCATION_ERROR_CODES = {
+  permissionDenied: 1,
+  positionUnavailable: 2,
+  timeout: 3
+} as const;
+
+const geolocationErrorCode = (error: unknown) => {
+  if (!error || typeof error !== "object" || !("code" in error)) return null;
+  const code = Number((error as GeolocationPositionError).code);
+  return Number.isFinite(code) ? code : null;
+};
+
+const isPermissionDeniedError = (error: unknown) =>
+  geolocationErrorCode(error) === GEOLOCATION_ERROR_CODES.permissionDenied;
+
+const toLatLng = (position: GeolocationPosition): LatLng => ({
+  lat: position.coords.latitude,
+  lng: position.coords.longitude
+});
+
+const getGeolocationPosition = (options: PositionOptions) =>
+  new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+
+const watchGeolocationPositionOnce = (options: PositionOptions) =>
+  new Promise<GeolocationPosition>((resolve, reject) => {
+    let lastError: unknown = null;
+    let settled = false;
+    let watchId: number | null = null;
+    let timeoutId: number | null = null;
+    const cleanup = () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(position);
+      },
+      (error) => {
+        lastError = error;
+        if (!isPermissionDeniedError(error)) return;
+
+        settled = true;
+        cleanup();
+        reject(error);
+      },
+      options
+    );
+
+    timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(lastError || new Error("Timed out while watching current position"));
+    }, LOCATION_WATCH_TIMEOUT_MS);
+  });
+
+const getBestEffortGeolocationPosition = async () => {
+  let lastError: unknown = null;
+
+  for (const options of LOCATION_REQUEST_OPTIONS) {
+    try {
+      return await getGeolocationPosition(options);
+    } catch (error) {
+      lastError = error;
+      if (isPermissionDeniedError(error)) throw error;
+    }
+  }
+
+  try {
+    return await watchGeolocationPositionOnce(LOCATION_REQUEST_OPTIONS[1]);
+  } catch (error) {
+    throw lastError || error;
+  }
+};
+
+const currentLocationErrorMessage = (error: unknown) => {
+  const code = geolocationErrorCode(error);
+
+  if (code === GEOLOCATION_ERROR_CODES.permissionDenied) {
+    return "位置情報が許可されていません";
+  }
+
+  if (code === GEOLOCATION_ERROR_CODES.positionUnavailable) {
+    return "現在地を特定できませんでした。macOSの位置情報サービスとWi-Fiを確認してください";
+  }
+
+  if (code === GEOLOCATION_ERROR_CODES.timeout) {
+    return "現在地の取得がタイムアウトしました。少し待ってから再試行してください";
+  }
+
+  return "現在地を取得できませんでした";
+};
+
 export default function ShindaiMapApp({
   initialFacilities,
   categories,
@@ -670,19 +779,27 @@ export default function ShindaiMapApp({
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setTransitPosition({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
+    let alive = true;
+
+    const syncCurrentPosition = async () => {
+      try {
+        const position = await getBestEffortGeolocationPosition();
+        if (!alive) return;
+
+        updateCurrentLocationMarker(toLatLng(position));
         setTransitStatusText("現在地から最寄りを表示");
-      },
-      () => {
-        setTransitStatusText("現在地未許可のため選択キャンパス基準");
-      },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 120000 }
-    );
+      } catch {
+        if (alive) {
+          setTransitStatusText("現在地未取得のため選択キャンパス基準");
+        }
+      }
+    };
+
+    void syncCurrentPosition();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1015,33 +1132,37 @@ export default function ShindaiMapApp({
     }
   };
 
-  const showCurrentLocationOnMap = () => {
+  const showCurrentLocationOnMap = async () => {
     if (!navigator.geolocation) {
       setMapMessage("現在地を取得できないブラウザです");
       return;
     }
 
     setMapMessage("現在地を取得中");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const currentPosition = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        const displayedOnGoogleMap = updateCurrentLocationMarker(currentPosition, {
+
+    try {
+      const position = await getBestEffortGeolocationPosition();
+      const displayedOnGoogleMap = updateCurrentLocationMarker(toLatLng(position), {
+        panMap: true
+      });
+      setMapMessage(
+        displayedOnGoogleMap ? "現在地を表示中" : "ローカル用地図で現在地を表示中"
+      );
+    } catch (error) {
+      if (transitPosition && !isPermissionDeniedError(error)) {
+        const displayedOnGoogleMap = updateCurrentLocationMarker(transitPosition, {
           panMap: true
         });
         setMapMessage(
           displayedOnGoogleMap
-            ? "現在地を表示中"
-            : "ローカル用地図で現在地を表示中"
+            ? "直近の現在地を表示中（現在地を更新できませんでした）"
+            : "ローカル用地図で直近の現在地を表示中"
         );
-      },
-      () => {
-        setMapMessage("現在地を取得できませんでした");
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-    );
+        return;
+      }
+
+      setMapMessage(currentLocationErrorMessage(error));
+    }
   };
 
   useEffect(() => {
