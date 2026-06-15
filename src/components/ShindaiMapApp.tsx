@@ -150,6 +150,41 @@ const getLegacyMapsApi = () =>
     DirectionsService: new () => LegacyDirectionsService;
   };
 
+const getAstroAuditElementYPosition = (element: HTMLElement) => {
+  let currentElement: HTMLElement | null = element;
+  let yPosition = 0;
+
+  while (currentElement) {
+    yPosition += currentElement.offsetTop;
+    currentElement = currentElement.offsetParent as HTMLElement | null;
+  }
+
+  return yPosition;
+};
+
+const syncGoogleMapLoadingAttribute = (element: HTMLImageElement | HTMLIFrameElement) => {
+  if (element.src.startsWith("data:")) return;
+
+  const desiredLoading =
+    getAstroAuditElementYPosition(element) < window.innerHeight ? "eager" : "lazy";
+
+  if (element.getAttribute("loading") !== desiredLoading) {
+    element.setAttribute("loading", desiredLoading);
+  }
+
+  if (element instanceof HTMLImageElement && element.getAttribute("decoding") !== "async") {
+    element.setAttribute("decoding", "async");
+  }
+};
+
+const syncGoogleMapAuditAttributes = (mapElement: HTMLElement) => {
+  for (const element of mapElement.querySelectorAll<HTMLImageElement | HTMLIFrameElement>(
+    "img, iframe"
+  )) {
+    syncGoogleMapLoadingAttribute(element);
+  }
+};
+
 const icons: Record<string, IconDefinition> = {
   accessibility: faUniversalAccess,
   "heart-pulse": faHeartPulse,
@@ -1232,6 +1267,73 @@ export default function ShindaiMapApp({
       alive = false;
     };
   }, [campusCenters]);
+
+  useEffect(() => {
+    if (!googleMapReady) return;
+
+    const mapElement = mapElementRef.current;
+    if (!mapElement) return;
+
+    let animationFrameId: number | null = null;
+    const delayedSyncTimeouts = new Map<number, number>();
+
+    const runSync = () => {
+      animationFrameId = null;
+      syncGoogleMapAuditAttributes(mapElement);
+    };
+
+    const scheduleSync = () => {
+      if (animationFrameId !== null) return;
+      animationFrameId = window.requestAnimationFrame(runSync);
+    };
+
+    const scheduleDelayedSync = (delay: number) => {
+      if (delayedSyncTimeouts.has(delay)) return;
+
+      const timeoutId = window.setTimeout(() => {
+        delayedSyncTimeouts.delete(delay);
+        scheduleSync();
+      }, delay);
+      delayedSyncTimeouts.set(delay, timeoutId);
+    };
+
+    const scheduleSyncBurst = () => {
+      scheduleSync();
+      for (const delay of [100, 500, 1500, 3000, 6000]) {
+        scheduleDelayedSync(delay);
+      }
+    };
+
+    scheduleSyncBurst();
+
+    const observer = new MutationObserver(scheduleSyncBurst);
+    observer.observe(mapElement, {
+      attributes: true,
+      attributeFilter: ["class", "loading", "src", "style"],
+      childList: true,
+      subtree: true
+    });
+
+    const idleListener = googleMapRef.current?.addListener("idle", scheduleSyncBurst);
+    const tilesLoadedListener = googleMapRef.current?.addListener(
+      "tilesloaded",
+      scheduleSyncBurst
+    );
+    window.addEventListener("resize", scheduleSyncBurst);
+
+    return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      for (const timeoutId of delayedSyncTimeouts.values()) {
+        window.clearTimeout(timeoutId);
+      }
+      observer.disconnect();
+      idleListener?.remove();
+      tilesLoadedListener?.remove();
+      window.removeEventListener("resize", scheduleSyncBurst);
+    };
+  }, [googleMapReady]);
 
   useEffect(() => {
     const shell = document.querySelector<HTMLElement>(".map-shell");
