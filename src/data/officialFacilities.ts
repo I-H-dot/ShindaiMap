@@ -32,7 +32,7 @@ const sourceMetadataForRecord = (record: OfficialFacilityRecord) => {
     verifiedAt: UPDATED_AT,
     confidence: "high",
     sourceNote: record.officialMapNumber
-      ? "公式施設番号とキャンパスマップ上のピン位置を照合した座標です。"
+      ? "大まかな位置関係を表した地図です。厳密性にかけることがあります。"
       : "公式ページまたは公式地図に基づく追加座標です。"
   });
 };
