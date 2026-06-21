@@ -552,6 +552,88 @@ const CampusTransitRow = ({ title, stopDistance, now }: CampusTransitRowProps) =
   );
 };
 
+const CompactCampusTransitCard = ({ title, stopDistance, now }: CampusTransitRowProps) => {
+  if (!stopDistance || !now) return null;
+
+  const { stop, distanceMeters } = stopDistance;
+  const directions = getTransitDirections(stop);
+  const activeDirection = directions[0] || stop.direction;
+  const departures = getUpcomingDepartures(stop, now, 2, activeDirection);
+  const icon = stop.mode === "bus" ? faBus : faTrain;
+  const canShowDepartures =
+    stop.mode !== "train" || Boolean(stop.directionSchedules?.[activeDirection]);
+  const officialLinks = getTransitTimetableLinks(stop, activeDirection);
+  const primaryOfficialLink = officialLinks[0] || {
+    label: "公式時刻表",
+    url: stop.timetableUrl
+  };
+
+  return (
+    <article className="mobile-campus-transit-card">
+      <div className="mobile-campus-transit-card-top">
+        <FontAwesomeIcon icon={icon} />
+        <div>
+          <span className="mobile-campus-transit-kind">{title}</span>
+          <strong>{stop.name}</strong>
+        </div>
+        <a
+          href={primaryOfficialLink.url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`${primaryOfficialLink.label}を開く`}
+        >
+          公式
+        </a>
+      </div>
+      <p className="mobile-campus-transit-meta">
+        {formatStopDistance(distanceMeters)} / {activeDirection}
+      </p>
+      {canShowDepartures ? (
+        <div className="mobile-campus-transit-times">
+          {departures.map((departure, index) => (
+            <span key={`${stop.id}-${departure.time}-${index}`}>
+              <small>{index === 0 ? "先発" : "次発"}</small>
+              <strong>{departure.time}</strong>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mobile-campus-transit-official-only">
+          {activeDirection}は公式時刻表で確認してください。
+        </p>
+      )}
+    </article>
+  );
+};
+
+interface MobileCampusTransitGuideProps {
+  busStopDistance: TransitStopDistance | null;
+  trainStopDistance: TransitStopDistance | null;
+  now: Date | null;
+}
+
+const MobileCampusTransitGuide = ({
+  busStopDistance,
+  trainStopDistance,
+  now
+}: MobileCampusTransitGuideProps) => {
+  if (!now || (!busStopDistance && !trainStopDistance)) return null;
+
+  return (
+    <section className="mobile-campus-transit-guide" aria-label="キャンパス最寄りの時刻表">
+      <h2 className="mobile-campus-transit-title">キャンパス最寄りの時刻表</h2>
+      <div className="mobile-campus-transit-list">
+        <CompactCampusTransitCard title="バス" stopDistance={busStopDistance} now={now} />
+        <CompactCampusTransitCard
+          title="電車"
+          stopDistance={trainStopDistance}
+          now={now}
+        />
+      </div>
+    </section>
+  );
+};
+
 const getCoordinateBounds = (positions: LatLng[]) => {
   const lats = positions.map((position) => position.lat);
   const lngs = positions.map((position) => position.lng);
@@ -2543,6 +2625,13 @@ export default function ShindaiMapApp({
               </label>
             </div>
           </div>
+          {selectedFacility && (
+            <MobileCampusTransitGuide
+              busStopDistance={campusNearestBus}
+              trainStopDistance={campusNearestTrain}
+              now={now}
+            />
+          )}
           <TransitDepartureCard
             title="現在地最寄り"
             stopDistance={currentNearestTransit}
