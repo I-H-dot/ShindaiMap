@@ -1,7 +1,13 @@
 import type { CampusName, Facility } from "../lib/types";
 import aedLocationRecordsData from "./aedLocations.json";
+import {
+  appendSourceLink,
+  buildSourceMetadata,
+  toFacilitySourceFields,
+  type SourceMetadataRecord
+} from "./sourceMetadata";
 
-interface AedLocationRecord {
+interface AedLocationRecord extends SourceMetadataRecord {
   id: string;
   name: string;
   campus: CampusName;
@@ -23,6 +29,14 @@ const SOURCE_DATE = "2025-03-24";
 const UPDATED_AT = "2026-06-12";
 
 export const aedFacilities: Facility[] = aedLocationRecords.map((record) => {
+  const sourceMetadata = buildSourceMetadata(record, {
+    sourceType: "official-pdf",
+    sourceName: "神戸大学AED設置場所一覧",
+    sourceUrl: SOURCE_URL,
+    verifiedAt: UPDATED_AT,
+    confidence: record.matchedOfficialFacilityId ? "high" : "medium",
+    sourceNote: `公開一覧の基準日は${SOURCE_DATE}です。座標は建物代表点または公式画像からの変換位置です。`
+  });
   const attributes = [
     record.supportsInfant ? "未就学児対応" : null,
     record.outdoor ? "屋外設置" : null
@@ -55,9 +69,11 @@ export const aedFacilities: Facility[] = aedLocationRecords.map((record) => {
       record.campus,
       ...attributes
     ],
-    links: [{ label: "神戸大学AED設置場所一覧", url: SOURCE_URL }],
+    links: appendSourceLink(undefined, sourceMetadata),
     sourceArea: record.sourceArea,
-    updatedAt: UPDATED_AT,
-    source: `Kobe University AED location list (${SOURCE_DATE})`
+    ...toFacilitySourceFields(sourceMetadata, {
+      updatedAt: UPDATED_AT,
+      legacySource: `Kobe University AED location list (${SOURCE_DATE})`
+    })
   };
 });

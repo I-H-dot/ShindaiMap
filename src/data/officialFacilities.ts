@@ -1,7 +1,14 @@
 import type { CampusName, Facility, FacilityCategory } from "../lib/types";
 import officialFacilityRecordsData from "./officialFacilities.json";
+import {
+  appendSourceLink,
+  buildSourceMetadata,
+  officialCampusSourceUrls,
+  toFacilitySourceFields,
+  type SourceMetadataRecord
+} from "./sourceMetadata";
 
-interface OfficialFacilityRecord {
+interface OfficialFacilityRecord extends SourceMetadataRecord {
   id: string;
   name: string;
   campus: CampusName;
@@ -14,6 +21,21 @@ interface OfficialFacilityRecord {
 const officialFacilityRecords = officialFacilityRecordsData as OfficialFacilityRecord[];
 
 const UPDATED_AT = "2026-06-12";
+
+const sourceMetadataForRecord = (record: OfficialFacilityRecord) => {
+  const sourceUrl = officialCampusSourceUrls[record.sourceArea];
+
+  return buildSourceMetadata(record, {
+    sourceType: "official-campus-map",
+    sourceName: `神戸大学 ${record.sourceArea}`,
+    ...(sourceUrl ? { sourceUrl } : {}),
+    verifiedAt: UPDATED_AT,
+    confidence: "high",
+    sourceNote: record.officialMapNumber
+      ? "公式施設番号とキャンパスマップ上のピン位置を照合した座標です。"
+      : "公式ページまたは公式地図に基づく追加座標です。"
+  });
+};
 
 const inferCategory = (record: OfficialFacilityRecord): FacilityCategory => {
   const name = record.name.normalize("NFKC");
@@ -39,6 +61,7 @@ const inferCategory = (record: OfficialFacilityRecord): FacilityCategory => {
 
 export const officialFacilities: Facility[] = officialFacilityRecords.map((record) => {
   const category = inferCategory(record);
+  const sourceMetadata = sourceMetadataForRecord(record);
   const officialLabel = record.officialMapNumber
     ? `公式地図No.${record.officialMapNumber}`
     : "追加座標";
@@ -66,9 +89,12 @@ export const officialFacilities: Facility[] = officialFacilityRecords.map((recor
         : ""),
     aliases: [record.name, ...numberTags],
     tags: ["公式地図", "座標", record.campus, record.sourceArea, ...numberTags],
+    links: appendSourceLink(undefined, sourceMetadata, `${record.sourceArea} 公式ページ`),
     sourceArea: record.sourceArea,
-    updatedAt: UPDATED_AT,
-    source: `ShindaiMap coordinate data / ${record.sourceArea}`,
+    ...toFacilitySourceFields(sourceMetadata, {
+      updatedAt: UPDATED_AT,
+      legacySource: `ShindaiMap coordinate data / ${record.sourceArea}`
+    }),
     ...(record.officialMapNumber
       ? { officialMapNumber: record.officialMapNumber }
       : {})

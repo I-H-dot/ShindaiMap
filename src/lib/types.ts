@@ -42,6 +42,27 @@ export interface FacilityLink {
   url: string;
 }
 
+export type SourceType =
+  | "official-page"
+  | "official-pdf"
+  | "official-campus-map"
+  | "official-map-image"
+  | "official-transit"
+  | "generated-transit"
+  | "field-survey"
+  | "community-report";
+
+export type SourceConfidence = "high" | "medium" | "low" | "unverified";
+
+export interface SourceMetadata {
+  sourceType: SourceType;
+  sourceName: string;
+  sourceUrl?: string;
+  verifiedAt: string;
+  confidence: SourceConfidence;
+  sourceNote?: string;
+}
+
 export interface Facility {
   id: string;
   name: string;
@@ -66,6 +87,12 @@ export interface Facility {
   sourceArea?: string;
   updatedAt: string;
   source: string;
+  sourceType: SourceType;
+  sourceName: string;
+  sourceUrl?: string;
+  verifiedAt: string;
+  confidence: SourceConfidence;
+  sourceNote?: string;
 }
 
 export interface FacilityFilters {

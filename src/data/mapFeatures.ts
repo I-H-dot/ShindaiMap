@@ -1,7 +1,14 @@
 import type { CampusName, Facility, FacilityCategory } from "../lib/types";
 import mapFeatureRecordsData from "./mapFeatures.json";
+import {
+  appendSourceLink,
+  buildSourceMetadata,
+  officialCampusSourceUrls,
+  toFacilitySourceFields,
+  type SourceMetadataRecord
+} from "./sourceMetadata";
 
-interface MapFeatureRecord {
+interface MapFeatureRecord extends SourceMetadataRecord {
   id: string;
   name: string;
   category: FacilityCategory;
@@ -22,6 +29,19 @@ const mapFeatureRecords = mapFeatureRecordsData as MapFeatureRecord[];
 
 const UPDATED_AT = "2026-06-13";
 
+const sourceMetadataForRecord = (record: MapFeatureRecord) => {
+  const sourceUrl = officialCampusSourceUrls[record.sourceArea];
+
+  return buildSourceMetadata(record, {
+    sourceType: "official-map-image",
+    sourceName: `${record.sourceArea} 公式キャンパスマップ画像`,
+    ...(sourceUrl ? { sourceUrl } : {}),
+    verifiedAt: UPDATED_AT,
+    confidence: "medium",
+    sourceNote: `${record.sourceImage} の画像座標を制御点で変換した位置です。RMSE ${record.transformRmseMeters}m。`
+  });
+};
+
 const categoryLabels: Partial<Record<FacilityCategory, string>> = {
   "bicycle-parking": "駐輪場",
   "motorcycle-parking": "バイク駐輪場",
@@ -37,6 +57,7 @@ const categoryLabels: Partial<Record<FacilityCategory, string>> = {
 export const mapFeatureFacilities: Facility[] = mapFeatureRecords.map((record) => {
   const label = categoryLabels[record.category] ?? record.category;
   const pixelLabel = `画像座標(${record.sourceImagePixel.x}, ${record.sourceImagePixel.y})`;
+  const sourceMetadata = sourceMetadataForRecord(record);
 
   return {
     id: record.id,
@@ -65,8 +86,11 @@ export const mapFeatureFacilities: Facility[] = mapFeatureRecords.map((record) =
       record.campus,
       record.sourceArea
     ],
+    links: appendSourceLink(undefined, sourceMetadata, `${record.sourceArea} 公式ページ`),
     sourceArea: record.sourceArea,
-    updatedAt: UPDATED_AT,
-    source: `Kobe University official campus map image / ${record.sourceImage}`
+    ...toFacilitySourceFields(sourceMetadata, {
+      updatedAt: UPDATED_AT,
+      legacySource: `Kobe University official campus map image / ${record.sourceImage}`
+    })
   };
 });

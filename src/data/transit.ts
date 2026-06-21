@@ -6,6 +6,11 @@ import type {
   TransitStop
 } from "../lib/transit";
 import { generatedTrainTimetables } from "./generated/trainTimetables";
+import {
+  buildSourceMetadata,
+  normalizeDateOnly,
+  type SourceMetadataRecord
+} from "./sourceMetadata";
 import transitStopRecordsData from "./transitStops.json";
 
 const toMinutes = (time: string) => {
@@ -172,7 +177,7 @@ type TransitScheduleKey =
   | "subway"
   | "portliner";
 
-interface TransitStopRecord {
+interface TransitStopRecord extends SourceMetadataRecord {
   id: string;
   name: string;
   mode: TransitMode;
@@ -207,26 +212,61 @@ const transitScheduleMap: Record<TransitScheduleKey, TransitSchedule> = {
   portliner: { weekday: portlinerWeekday, weekend: portlinerWeekend }
 };
 
-const transitStopSeed = transitStopRecords.map((record): TransitStop => ({
-  id: record.id,
-  name: record.name,
-  mode: record.mode,
-  operator: record.operator,
-  line: record.line,
-  direction: record.direction,
-  campus: record.campus,
-  position: record.position,
-  timetableUrl: record.timetableUrl,
-  timetableLinks: record.timetableLinks,
-  positionSourceUrl: record.positionSourceUrl,
-  positionSourceName: record.positionSourceName,
-  updatedAt: record.updatedAt,
-  note: record.note,
-  schedule: transitScheduleMap[record.scheduleKey],
-  ...(record.mode === "train"
-    ? { directionSchedules: trainDirectionSchedules(record.id) }
-    : {})
-}));
+const DEFAULT_TRANSIT_VERIFIED_AT = "2026-06-14";
+
+const sourceMetadataForRecord = (record: TransitStopRecord) => {
+  const sourceUrl =
+    record.sourceUrl ||
+    (record.mode === "bus" ? record.positionSourceUrl : undefined) ||
+    record.timetableUrl;
+  const sourceName =
+    record.sourceName ||
+    (record.mode === "bus"
+      ? record.positionSourceName || `${record.operator} 停留所情報`
+      : `${record.operator} ${record.name}駅情報`);
+
+  return buildSourceMetadata(record, {
+    sourceType: "official-transit",
+    sourceName,
+    sourceUrl,
+    verifiedAt:
+      record.verifiedAt ||
+      record.updatedAt ||
+      normalizeDateOnly(generatedTrainTimetables.updatedAt) ||
+      DEFAULT_TRANSIT_VERIFIED_AT,
+    confidence: record.confidence || (record.mode === "bus" ? "high" : "medium"),
+    sourceNote:
+      record.mode === "bus"
+        ? "停留所情報ページの埋め込み地図座標を位置情報の根拠にしています。"
+        : "駅ページ・公式時刻表リンクと月次生成データを根拠にしています。"
+  });
+};
+
+const transitStopSeed = transitStopRecords.map((record): TransitStop => {
+  const sourceMetadata = sourceMetadataForRecord(record);
+
+  return {
+    id: record.id,
+    name: record.name,
+    mode: record.mode,
+    operator: record.operator,
+    line: record.line,
+    direction: record.direction,
+    campus: record.campus,
+    position: record.position,
+    timetableUrl: record.timetableUrl,
+    timetableLinks: record.timetableLinks,
+    positionSourceUrl: record.positionSourceUrl,
+    positionSourceName: record.positionSourceName,
+    updatedAt: normalizeDateOnly(record.updatedAt || sourceMetadata.verifiedAt),
+    note: record.note,
+    schedule: transitScheduleMap[record.scheduleKey],
+    ...sourceMetadata,
+    ...(record.mode === "train"
+      ? { directionSchedules: trainDirectionSchedules(record.id) }
+      : {})
+  };
+});
 
 export const transitStops: TransitStop[] = [...transitStopSeed].sort((a, b) => {
   const aPriority = campusPriority[a.campus].indexOf(a.id);

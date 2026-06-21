@@ -2,6 +2,7 @@ import type { CampusName, Facility } from "../lib/types";
 import { aedFacilities } from "./aedLocations";
 import { mapFeatureFacilities } from "./mapFeatures";
 import { officialFacilities } from "./officialFacilities";
+import { toFacilitySourceFields } from "./sourceMetadata";
 import { transitStops } from "./transit";
 
 export const campusCenters: Record<CampusName, { lat: number; lng: number; label: string }> = {
@@ -22,6 +23,10 @@ const transitStopFacilities: Facility[] = transitStops.map((stop) => {
     !isTrain && stop.positionSourceUrl && stop.positionSourceUrl !== stop.timetableUrl
       ? [{ label: `${stop.name} 停留所地図`, url: stop.positionSourceUrl }]
       : [];
+
+  const legacySource = isTrain
+    ? `${stop.operator} station information and ShindaiMap train timetable data`
+    : `${stop.positionSourceName || `${stop.operator} bus stop information`} and ShindaiMap representative bus timetable data`;
 
   return {
     id: isTrain ? `station-${stop.id}` : `bus-${stop.id}`,
@@ -56,10 +61,10 @@ const transitStopFacilities: Facility[] = transitStops.map((stop) => {
         url: link.url
       }))
     ],
-    updatedAt: stop.updatedAt || "2026-06-12",
-    source: isTrain
-      ? `${stop.operator} station information and ShindaiMap train timetable data`
-      : `${stop.positionSourceName || `${stop.operator} bus stop information`} and ShindaiMap representative bus timetable data`
+    ...toFacilitySourceFields(stop, {
+      updatedAt: stop.updatedAt || stop.verifiedAt,
+      legacySource
+    })
   };
 });
 

@@ -1,5 +1,5 @@
 import { formatDistance, metersBetween } from "./distance";
-import type { CampusName, LatLng } from "./types";
+import type { CampusName, LatLng, SourceMetadata } from "./types";
 
 export type TransitMode = "bus" | "train";
 
@@ -28,7 +28,7 @@ export interface GeneratedTrainTimetables {
   stops: Partial<Record<string, Record<string, TransitSchedule>>>;
 }
 
-export interface TransitStop {
+export interface TransitStop extends SourceMetadata {
   id: string;
   name: string;
   mode: TransitMode;

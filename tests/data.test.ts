@@ -4,7 +4,7 @@ import { generatedTrainTimetables } from "../src/data/generated/trainTimetables"
 import { officialFacilities } from "../src/data/officialFacilities";
 import { campusCenters, facilities } from "../src/data/facilities";
 import { transitStops } from "../src/data/transit";
-import type { FacilityCategory } from "../src/lib/types";
+import type { FacilityCategory, SourceConfidence, SourceType } from "../src/lib/types";
 
 const kobeUniversityBounds = {
   minLat: 34.55,
@@ -30,6 +30,24 @@ const isValidDateOnly = (value: string) => {
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 };
+
+const sourceTypes = new Set<SourceType>([
+  "official-page",
+  "official-pdf",
+  "official-campus-map",
+  "official-map-image",
+  "official-transit",
+  "generated-transit",
+  "field-survey",
+  "community-report"
+]);
+
+const confidenceLevels = new Set<SourceConfidence>([
+  "high",
+  "medium",
+  "low",
+  "unverified"
+]);
 
 describe("seed data", () => {
   it("has unique facility ids", () => {
@@ -74,6 +92,28 @@ describe("seed data", () => {
       );
       expect(campusCenters[facility.campus], `${facility.id} has an unknown campus`).toBeDefined();
       expect(facility.source.trim(), `${facility.id} needs a source`).not.toBe("");
+      expect(sourceTypes.has(facility.sourceType), `${facility.id} has an invalid sourceType`)
+        .toBe(true);
+      expect(facility.sourceName.trim(), `${facility.id} needs a sourceName`).not.toBe("");
+      expect(
+        isValidDateOnly(facility.verifiedAt),
+        `${facility.id} has an invalid verifiedAt`
+      ).toBe(true);
+      expect(
+        confidenceLevels.has(facility.confidence),
+        `${facility.id} has an invalid confidence`
+      ).toBe(true);
+
+      if (facility.sourceUrl) {
+        let parsedSourceUrl: URL;
+        expect(() => {
+          parsedSourceUrl = new URL(facility.sourceUrl!);
+        }, `${facility.id} has an invalid sourceUrl: ${facility.sourceUrl}`).not.toThrow();
+        expect(
+          ["http:", "https:"],
+          `${facility.id} uses an unsupported sourceUrl protocol`
+        ).toContain(parsedSourceUrl!.protocol);
+      }
 
       for (const link of facility.links || []) {
         expect(link.label.trim(), `${facility.id} has an empty link label`).not.toBe("");
@@ -186,6 +226,21 @@ describe("seed data", () => {
     for (const stop of transitStops) {
       const expectedId = stop.mode === "train" ? `station-${stop.id}` : `bus-${stop.id}`;
       expect(facilityIds.has(expectedId)).toBe(true);
+    }
+  });
+
+  it("keeps source metadata on every transit stop", () => {
+    for (const stop of transitStops) {
+      expect(stop.sourceType, `${stop.id} needs a transit sourceType`).toBe(
+        "official-transit"
+      );
+      expect(stop.sourceName.trim(), `${stop.id} needs a transit sourceName`).not.toBe("");
+      expect(stop.sourceUrl, `${stop.id} needs a transit sourceUrl`).toBeTruthy();
+      expect(isValidDateOnly(stop.verifiedAt), `${stop.id} has an invalid verifiedAt`).toBe(
+        true
+      );
+      expect(confidenceLevels.has(stop.confidence), `${stop.id} has an invalid confidence`)
+        .toBe(true);
     }
   });
 

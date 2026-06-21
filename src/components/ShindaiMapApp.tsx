@@ -52,7 +52,9 @@ import type {
   CategoryDefinition,
   Facility,
   FacilityCategory,
-  LatLng
+  LatLng,
+  SourceConfidence,
+  SourceType
 } from "../lib/types";
 import { countFacilitiesByCategory, searchFacilities } from "../lib/search";
 import { withBasePath } from "../lib/urls";
@@ -90,6 +92,11 @@ interface NavigationState {
   recalculating: boolean;
 }
 
+interface CurrentLocationSnapshot {
+  position: LatLng;
+  capturedAt: number;
+}
+
 interface TouchStartState {
   x: number;
   y: number;
@@ -108,6 +115,8 @@ type DeviceOrientationEventConstructorWithPermission = typeof DeviceOrientationE
   requestPermission?: () => Promise<PermissionState>;
 };
 
+type GoogleMapLoadState = "checking" | "missing-key" | "loading" | "ready" | "failed";
+
 type LegacyMarkerOptions = {
   map: google.maps.Map;
   position: google.maps.LatLng | google.maps.LatLngLiteral;
@@ -121,6 +130,7 @@ type LegacyMarker = google.maps.MVCObject & {
   setMap(map: google.maps.Map | null): void;
   setPosition(position: google.maps.LatLng | google.maps.LatLngLiteral): void;
   setIcon(icon: google.maps.Icon | google.maps.Symbol | string | null): void;
+  setTitle(title: string | null): void;
   setZIndex(zIndex: number | null): void;
 };
 
@@ -224,6 +234,25 @@ const DESTINATION_ARRIVAL_THRESHOLD_METERS = 28;
 const REROUTE_COOLDOWN_MS = 12000;
 const NAVIGATION_CAMERA_ZOOM = 19;
 const MIN_HEADING_MOVE_METERS = 3;
+const CURRENT_LOCATION_STALE_AFTER_MS = 60 * 1000;
+
+const sourceTypeLabels: Record<SourceType, string> = {
+  "official-page": "公式ページ",
+  "official-pdf": "公式PDF",
+  "official-campus-map": "公式地図",
+  "official-map-image": "公式地図画像",
+  "official-transit": "公式交通情報",
+  "generated-transit": "生成交通データ",
+  "field-survey": "現地確認",
+  "community-report": "利用者報告"
+};
+
+const sourceConfidenceLabels: Record<SourceConfidence, string> = {
+  high: "高",
+  medium: "中",
+  low: "低",
+  unverified: "未確認"
+};
 
 const cleanRouteInstruction = (instruction: string) => {
   if (typeof document === "undefined") {
@@ -570,6 +599,7 @@ const isCampusViewportFacility = (facility: Facility) => {
 };
 
 const LOCATION_REQUEST_OPTIONS: PositionOptions[] = [
+  { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 },
   { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
   { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
 ];
@@ -660,19 +690,81 @@ const getBestEffortGeolocationPosition = async () => {
   }
 };
 
+const getGeolocationTimestamp = (position: GeolocationPosition) =>
+  Number.isFinite(position.timestamp) && position.timestamp > 0
+    ? position.timestamp
+    : Date.now();
+
+const toCurrentLocationSnapshot = (
+  position: GeolocationPosition
+): CurrentLocationSnapshot => ({
+  position: toLatLng(position),
+  capturedAt: getGeolocationTimestamp(position)
+});
+
+const currentLocationAgeMs = (location: CurrentLocationSnapshot) =>
+  Math.max(0, Date.now() - location.capturedAt);
+
+const isStaleCurrentLocation = (location: CurrentLocationSnapshot) =>
+  currentLocationAgeMs(location) > CURRENT_LOCATION_STALE_AFTER_MS;
+
+const formatCurrentLocationAge = (location: CurrentLocationSnapshot) => {
+  const ageMs = currentLocationAgeMs(location);
+  if (ageMs < 60 * 1000) return "1分未満前";
+
+  const minutes = Math.max(1, Math.round(ageMs / (60 * 1000)));
+  if (minutes < 60) return `約${minutes}分前`;
+
+  const hours = Math.max(1, Math.round(minutes / 60));
+  return `約${hours}時間前`;
+};
+
+const currentLocationTransitStatusText = (location: CurrentLocationSnapshot) =>
+  isStaleCurrentLocation(location)
+    ? `直近位置から最寄りを表示（${formatCurrentLocationAge(location)}）`
+    : "現在地から最寄りを表示";
+
+const currentLocationDisplayMessage = (
+  location: CurrentLocationSnapshot,
+  displayedOnGoogleMap: boolean,
+  reusedAfterError = false
+) => {
+  const mapPrefix = displayedOnGoogleMap ? "" : "ローカル用地図で";
+
+  if (isStaleCurrentLocation(location)) {
+    return `${mapPrefix}直近の現在地を表示中（${formatCurrentLocationAge(
+      location
+    )}・再取得できませんでした）`;
+  }
+
+  if (reusedAfterError) {
+    return `${mapPrefix}直近の現在地を表示中（現在地を更新できませんでした）`;
+  }
+
+  return `${mapPrefix}現在地を表示中`;
+};
+
+const currentLocationRouteOriginLabel = (location: CurrentLocationSnapshot) =>
+  isStaleCurrentLocation(location)
+    ? `${formatCurrentLocationAge(location)}の現在地`
+    : "現在地";
+
+const currentLocationTitle = (location: CurrentLocationSnapshot | null) =>
+  location && isStaleCurrentLocation(location) ? "直近の現在地" : "現在地";
+
 const currentLocationErrorMessage = (error: unknown) => {
   const code = geolocationErrorCode(error);
 
   if (code === GEOLOCATION_ERROR_CODES.permissionDenied) {
-    return "位置情報が許可されていません";
+    return "位置情報を許可してから現在地ボタンで再試行してください";
   }
 
   if (code === GEOLOCATION_ERROR_CODES.positionUnavailable) {
-    return "現在地を特定できませんでした。macOSの位置情報サービスとWi-Fiを確認してください";
+    return "現在地を特定できませんでした。端末の位置情報サービスと通信状態を確認してください";
   }
 
   if (code === GEOLOCATION_ERROR_CODES.timeout) {
-    return "現在地の取得がタイムアウトしました。少し待ってから再試行してください";
+    return "現在地の取得がタイムアウトしました。場所を開けた状態で再試行してください";
   }
 
   return "現在地を取得できませんでした";
@@ -699,7 +791,8 @@ export default function ShindaiMapApp({
   const [navigationState, setNavigationState] = useState<NavigationState | null>(null);
   const [navigationHeading, setNavigationHeading] = useState<number | null>(null);
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
-  const [transitPosition, setTransitPosition] = useState<LatLng | null>(null);
+  const [currentLocation, setCurrentLocation] =
+    useState<CurrentLocationSnapshot | null>(null);
   const [currentLocationVisible, setCurrentLocationVisible] = useState(false);
   const [transitStatusText, setTransitStatusText] =
     useState("現在地から最寄りを確認中");
@@ -707,6 +800,8 @@ export default function ShindaiMapApp({
   const [now, setNow] = useState<Date | null>(null);
   const [mapMessage, setMapMessage] = useState("Google Maps APIキーを確認中");
   const [googleMapReady, setGoogleMapReady] = useState(false);
+  const [googleMapLoadState, setGoogleMapLoadState] =
+    useState<GoogleMapLoadState>("checking");
   const [shareMessage, setShareMessage] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -714,6 +809,8 @@ export default function ShindaiMapApp({
     useState<MobilePanelState>("expanded");
   const [isMobileViewportActive, setIsMobileViewportActive] = useState(false);
   const [urlStateReady, setUrlStateReady] = useState(false);
+  const googleMapsApiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || "";
+  const transitPosition = currentLocation?.position || null;
   const isMobilePanelClosed = isMobileViewportActive && mobilePanelState === "closed";
 
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -738,6 +835,8 @@ export default function ShindaiMapApp({
   const lastSpokenInstructionRef = useRef("");
   const shouldFocusSelectedPanelRef = useRef(false);
   const voiceGuidanceEnabledRef = useRef(true);
+  const currentLocationRef = useRef<CurrentLocationSnapshot | null>(null);
+  const currentLocationVisibleRef = useRef(false);
 
   const focusSelectedPanel = () => {
     if (typeof window === "undefined" || isMobileViewport()) return;
@@ -798,6 +897,14 @@ export default function ShindaiMapApp({
   }, [voiceGuidanceEnabled]);
 
   useEffect(() => {
+    currentLocationRef.current = currentLocation;
+  }, [currentLocation]);
+
+  useEffect(() => {
+    currentLocationVisibleRef.current = currentLocationVisible;
+  }, [currentLocationVisible]);
+
+  useEffect(() => {
     const syncNow = () => {
       setNow(new Date());
     };
@@ -807,6 +914,11 @@ export default function ShindaiMapApp({
       window.clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentLocation || !currentLocationVisible) return;
+    setTransitStatusText(currentLocationTransitStatusText(currentLocation));
+  }, [currentLocation, currentLocationVisible, now]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -821,8 +933,7 @@ export default function ShindaiMapApp({
         const position = await getBestEffortGeolocationPosition();
         if (!alive) return;
 
-        updateCurrentLocationMarker(toLatLng(position));
-        setTransitStatusText("現在地から最寄りを表示");
+        updateCurrentLocationMarker(toCurrentLocationSnapshot(position));
       } catch {
         if (alive) {
           setTransitStatusText("現在地未取得のため選択キャンパス基準");
@@ -1169,7 +1280,7 @@ export default function ShindaiMapApp({
 
   const showCurrentLocationOnMap = async () => {
     if (!navigator.geolocation) {
-      setMapMessage("現在地を取得できないブラウザです");
+      setMapMessage("このブラウザでは現在地を取得できません");
       return;
     }
 
@@ -1177,21 +1288,19 @@ export default function ShindaiMapApp({
 
     try {
       const position = await getBestEffortGeolocationPosition();
-      const displayedOnGoogleMap = updateCurrentLocationMarker(toLatLng(position), {
+      const location = toCurrentLocationSnapshot(position);
+      const displayedOnGoogleMap = updateCurrentLocationMarker(location, {
         panMap: true
       });
-      setMapMessage(
-        displayedOnGoogleMap ? "現在地を表示中" : "ローカル用地図で現在地を表示中"
-      );
+      setMapMessage(currentLocationDisplayMessage(location, displayedOnGoogleMap));
     } catch (error) {
-      if (transitPosition && !isPermissionDeniedError(error)) {
-        const displayedOnGoogleMap = updateCurrentLocationMarker(transitPosition, {
+      const lastKnownLocation = currentLocationRef.current;
+      if (lastKnownLocation && !isPermissionDeniedError(error)) {
+        const displayedOnGoogleMap = updateCurrentLocationMarker(lastKnownLocation, {
           panMap: true
         });
         setMapMessage(
-          displayedOnGoogleMap
-            ? "直近の現在地を表示中（現在地を更新できませんでした）"
-            : "ローカル用地図で直近の現在地を表示中"
+          currentLocationDisplayMessage(lastKnownLocation, displayedOnGoogleMap, true)
         );
         return;
       }
@@ -1201,9 +1310,8 @@ export default function ShindaiMapApp({
   };
 
   useEffect(() => {
-    const apiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
-
-    if (!apiKey) {
+    if (!googleMapsApiKey) {
+      setGoogleMapLoadState("missing-key");
       setMapMessage("Google Maps APIキー未設定のため、ローカル用地図で表示中");
       return;
     }
@@ -1211,10 +1319,11 @@ export default function ShindaiMapApp({
     if (!mapElementRef.current || googleMapRef.current) return;
 
     let alive = true;
+    setGoogleMapLoadState("loading");
     import("@googlemaps/js-api-loader")
       .then(({ importLibrary, setOptions }) => {
         setOptions({
-          key: apiKey,
+          key: googleMapsApiKey,
           v: "weekly"
         });
         return Promise.all([
@@ -1256,17 +1365,36 @@ export default function ShindaiMapApp({
         });
         directionsRendererRef.current.setMap(map);
         setGoogleMapReady(true);
-        setMapMessage("Google Mapsで表示中");
+        setGoogleMapLoadState("ready");
+        const visibleLocation = currentLocationVisibleRef.current
+          ? currentLocationRef.current
+          : null;
+        setMapMessage(
+          visibleLocation
+            ? currentLocationDisplayMessage(visibleLocation, true)
+            : "Google Mapsで表示中"
+        );
       })
       .catch(() => {
         setGoogleMapReady(false);
-        setMapMessage("Google Mapsを読み込めないため、ローカル用地図で表示中");
+        setGoogleMapLoadState("failed");
+        const visibleLocation = currentLocationVisibleRef.current
+          ? currentLocationRef.current
+          : null;
+        setMapMessage(
+          visibleLocation
+            ? `Google Mapsを読み込めないため、${currentLocationDisplayMessage(
+                visibleLocation,
+                false
+              )}`
+            : "Google Mapsを読み込めないため、ローカル用地図で表示中"
+        );
       });
 
     return () => {
       alive = false;
     };
-  }, [campusCenters]);
+  }, [campusCenters, googleMapsApiKey]);
 
   useEffect(() => {
     if (!googleMapReady) return;
@@ -1669,12 +1797,14 @@ export default function ShindaiMapApp({
   };
 
   const updateCurrentLocationMarker = (
-    currentPosition: LatLng,
+    location: CurrentLocationSnapshot,
     options?: { panMap?: boolean }
   ) => {
-    setTransitPosition(currentPosition);
+    const currentPosition = location.position;
+    const markerTitle = currentLocationTitle(location);
+    setCurrentLocation(location);
     setCurrentLocationVisible(true);
-    setTransitStatusText("現在地から最寄りを表示");
+    setTransitStatusText(currentLocationTransitStatusText(location));
 
     if (!googleMapRef.current || typeof google === "undefined") return false;
 
@@ -1683,7 +1813,7 @@ export default function ShindaiMapApp({
       currentLocationMarkerRef.current = new legacyMaps.Marker({
         map: googleMapRef.current,
         position: currentPosition,
-        title: "現在地",
+        title: markerTitle,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           fillColor: "#2563eb",
@@ -1697,6 +1827,7 @@ export default function ShindaiMapApp({
     } else {
       currentLocationMarkerRef.current.setPosition(currentPosition);
       currentLocationMarkerRef.current.setMap(googleMapRef.current);
+      currentLocationMarkerRef.current.setTitle(markerTitle);
     }
 
     if (options?.panMap) {
@@ -1708,14 +1839,18 @@ export default function ShindaiMapApp({
   };
 
   useEffect(() => {
-    if (!googleMapReady || !transitPosition || !currentLocationVisible) return;
+    if (!googleMapReady || !currentLocation || !currentLocationVisible) return;
 
-    updateCurrentLocationMarker(transitPosition);
+    updateCurrentLocationMarker(currentLocation);
+    setMapMessage((message) =>
+      message.startsWith("ローカル用地図で")
+        ? currentLocationDisplayMessage(currentLocation, true)
+        : message
+    );
   }, [
+    currentLocation,
     currentLocationVisible,
-    googleMapReady,
-    transitPosition?.lat,
-    transitPosition?.lng
+    googleMapReady
   ]);
 
   const extractRouteDetails = (result: google.maps.DirectionsResult) => {
@@ -1901,13 +2036,14 @@ export default function ShindaiMapApp({
   };
 
   const updateNavigationProgress = (
-    currentPosition: LatLng,
+    location: CurrentLocationSnapshot,
     gpsHeading?: number | null
   ) => {
     const destination = navigationDestinationRef.current;
     if (!destination) return;
 
-    updateCurrentLocationMarker(currentPosition);
+    const currentPosition = location.position;
+    updateCurrentLocationMarker(location);
     const heading = inferNavigationHeading(currentPosition, destination, gpsHeading);
     setNavigationHeading(heading);
     applyNavigationCamera(currentPosition, heading);
@@ -1994,11 +2130,10 @@ export default function ShindaiMapApp({
 
     navigationWatchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const currentPosition = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        updateNavigationProgress(currentPosition, position.coords.heading);
+        updateNavigationProgress(
+          toCurrentLocationSnapshot(position),
+          position.coords.heading
+        );
       },
       () => {
         setNavigationState((state) =>
@@ -2015,7 +2150,7 @@ export default function ShindaiMapApp({
     );
   };
 
-  const showRouteFromCurrentLocation = () => {
+  const showRouteFromCurrentLocation = async () => {
     if (!selectedFacility || routeLoading) return;
 
     const destination = selectedFacility;
@@ -2039,51 +2174,70 @@ export default function ShindaiMapApp({
     setMapMessage("現在地からルートを表示中");
 
     if (!navigator.geolocation) {
-      showEstimatedRoute(fallbackOrigin, "現在地を取得できないため概算ルートを表示中");
+      showEstimatedRoute(
+        fallbackOrigin,
+        "現在地を取得できないブラウザのため、選択キャンパス基準の概算ルートを表示中"
+      );
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        if (!isNavigationRequestCurrent(requestId, destination)) return;
+    try {
+      const position = await getBestEffortGeolocationPosition();
+      if (!isNavigationRequestCurrent(requestId, destination)) return;
 
-        const origin = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
+      const location = toCurrentLocationSnapshot(position);
+      const origin = location.position;
+      const originLabel = currentLocationRouteOriginLabel(location);
 
-        routePreviewOriginRef.current = origin;
-        updateCurrentLocationMarker(origin, { panMap: true });
-        const routeDetails = await requestWalkingRoute(origin, destination);
+      routePreviewOriginRef.current = origin;
+      updateCurrentLocationMarker(location, { panMap: true });
+      const routeDetails = await requestWalkingRoute(origin, destination);
 
-        if (!isNavigationRequestCurrent(requestId, destination)) return;
+      if (!isNavigationRequestCurrent(requestId, destination)) return;
 
-        setRouteLoading(false);
-        if (!routeDetails) {
-          estimateRoute(origin, destination);
-          setMapMessage("Google Mapsの経路を取得できないため概算ルートを表示中");
-          return;
-        }
+      setRouteLoading(false);
+      if (!routeDetails) {
+        const reason =
+          googleMapLoadState === "ready"
+            ? "Google Mapsの経路を取得できないため"
+            : "Google Maps未読み込みのため";
+        estimateRoute(origin, destination);
+        setMapMessage(`${reason}、${originLabel}から概算ルートを表示中`);
+        return;
+      }
 
-        directionsRendererRef.current?.setDirections(routeDetails.directionsResult);
-        setRouteInfo({
-          distanceText: routeDetails.distanceText,
-          durationText: routeDetails.durationText,
-          mode: "google"
-        });
-        setMapMessage("ルートを表示中");
-      },
-      () => {
+      directionsRendererRef.current?.setDirections(routeDetails.directionsResult);
+      setRouteInfo({
+        distanceText: routeDetails.distanceText,
+        durationText: routeDetails.durationText,
+        mode: "google"
+      });
+      setMapMessage(`${originLabel}からルートを表示中`);
+    } catch (error) {
+      if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+      const lastKnownLocation = currentLocationRef.current;
+      if (lastKnownLocation && !isPermissionDeniedError(error)) {
+        updateCurrentLocationMarker(lastKnownLocation, { panMap: true });
         showEstimatedRoute(
-          fallbackOrigin,
-          "現在地を取得できなかったため概算ルートを表示中"
+          lastKnownLocation.position,
+          `現在地を更新できなかったため、${currentLocationRouteOriginLabel(
+            lastKnownLocation
+          )}から概算ルートを表示中`
         );
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
-    );
+        return;
+      }
+
+      showEstimatedRoute(
+        fallbackOrigin,
+        `${currentLocationErrorMessage(
+          error
+        )}。選択キャンパス基準の概算ルートを表示中`
+      );
+    }
   };
 
-  const startVoiceNavigation = () => {
+  const startVoiceNavigation = async () => {
     if (!selectedFacility) return;
 
     const destination = selectedFacility;
@@ -2123,49 +2277,72 @@ export default function ShindaiMapApp({
         offRoute: false,
         recalculating: false
       });
+      setMapMessage("現在地を取得できないブラウザのため案内を開始できません");
       speakNavigation("現在地を取得できないため、案内を開始できません。");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (!isNavigationRequestCurrent(requestId, destination)) return;
+    try {
+      const position = await getBestEffortGeolocationPosition();
+      if (!isNavigationRequestCurrent(requestId, destination)) return;
 
-        const origin = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        const heading = inferNavigationHeading(origin, destination, position.coords.heading);
+      const location = toCurrentLocationSnapshot(position);
+      const origin = location.position;
+      const heading = inferNavigationHeading(origin, destination, position.coords.heading);
 
-        routePreviewOriginRef.current = origin;
-        lastKnownNavigationPositionRef.current = origin;
-        setNavigationHeading(heading);
-        updateCurrentLocationMarker(origin, { panMap: true });
-        applyNavigationCamera(origin, heading);
-        void startNavigationRoute(origin, destination, "start", requestId);
-        startNavigationWatch();
-        setMapMessage("音声案内中");
-      },
-      () => {
-        if (!isNavigationRequestCurrent(requestId, destination)) return;
+      routePreviewOriginRef.current = origin;
+      lastKnownNavigationPositionRef.current = origin;
+      setNavigationHeading(heading);
+      updateCurrentLocationMarker(location, { panMap: true });
 
-        const meters = metersBetween(fallbackOrigin, destination.position);
-        estimateRoute(fallbackOrigin, destination);
+      if (isStaleCurrentLocation(location)) {
+        const meters = metersBetween(origin, destination.position);
+        estimateRoute(origin, destination);
         setNavigationState({
           active: false,
           destinationName: destination.name,
-          statusText: "現在地を取得できなかったため案内を開始できません",
+          statusText: "現在地が古いため案内を開始できません",
           distanceText: formatDistance(meters),
           durationText: formatWalkingTime(meters),
-          nextInstruction: "位置情報を許可すると案内を開始できます",
+          nextInstruction: `${formatCurrentLocationAge(
+            location
+          )}の位置を表示中です。現在地を再取得してから案内開始してください`,
           offRoute: false,
           recalculating: false
         });
-        setMapMessage("現在地を取得できませんでした");
-        speakNavigation("現在地を取得できませんでした。位置情報を許可してください。");
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
-    );
+        setMapMessage(
+          `現在地を更新できないため、${currentLocationRouteOriginLabel(
+            location
+          )}を表示中`
+        );
+        speakNavigation("現在地を更新できないため、案内を開始できません。");
+        return;
+      }
+
+      applyNavigationCamera(origin, heading);
+      void startNavigationRoute(origin, destination, "start", requestId);
+      startNavigationWatch();
+      setMapMessage("音声案内中");
+    } catch (error) {
+      if (!isNavigationRequestCurrent(requestId, destination)) return;
+
+      const meters = metersBetween(fallbackOrigin, destination.position);
+      estimateRoute(fallbackOrigin, destination);
+      setNavigationState({
+        active: false,
+        destinationName: destination.name,
+        statusText: "現在地を取得できなかったため案内を開始できません",
+        distanceText: formatDistance(meters),
+        durationText: formatWalkingTime(meters),
+        nextInstruction: isPermissionDeniedError(error)
+          ? "位置情報を許可してから案内開始を再試行してください"
+          : "現在地を再取得してから案内開始してください",
+        offRoute: false,
+        recalculating: false
+      });
+      setMapMessage(currentLocationErrorMessage(error));
+      speakNavigation("現在地を取得できませんでした。位置情報を許可して再試行してください。");
+    }
   };
 
   const shareSelectedFacility = async () => {
@@ -2259,6 +2436,12 @@ export default function ShindaiMapApp({
   const navigationHeadingText = isUsableHeading(navigationHeading)
     ? `${Math.round(navigationHeading)}°`
     : "進行方向を推定中";
+  const fallbackMapDescription =
+    googleMapLoadState === "missing-key"
+      ? "Google Maps APIキー未設定のため、施設ピンと現在地はローカル用地図で表示しています。"
+      : googleMapLoadState === "failed"
+        ? "Google Mapsを読み込めないため、施設ピンと現在地はローカル用地図で表示しています。"
+        : "Google Mapsの読み込み中は、施設ピンと現在地をローカル用地図で表示します。";
 
   return (
     <main className={`map-shell ${isNavigationMode ? "is-navigation-mode" : ""}`}>
@@ -2506,6 +2689,30 @@ export default function ShindaiMapApp({
                   )}
                 </div>
               )}
+              <div className="source-panel">
+                <div className="source-panel-main">
+                  <span className="source-label">出典</span>
+                  {selectedFacility.sourceUrl ? (
+                    <a
+                      href={selectedFacility.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {selectedFacility.sourceName}
+                    </a>
+                  ) : (
+                    <strong>{selectedFacility.sourceName}</strong>
+                  )}
+                </div>
+                <div className="source-facts">
+                  <span>{sourceTypeLabels[selectedFacility.sourceType]}</span>
+                  <span>確認日 {selectedFacility.verifiedAt}</span>
+                  <span>信頼度 {sourceConfidenceLabels[selectedFacility.confidence]}</span>
+                </div>
+                {selectedFacility.sourceNote && (
+                  <p className="source-note">{selectedFacility.sourceNote}</p>
+                )}
+              </div>
               <div className="guide-box campus-transit-guide">
                 <h3>キャンパス最寄りの時刻表</h3>
                 <CampusTransitRow title="バス" stopDistance={campusNearestBus} now={now} />
@@ -2617,9 +2824,7 @@ export default function ShindaiMapApp({
           <div className="fallback-map">
             <div className="fallback-campus-label">
               <strong>{campus === "all" ? "全キャンパス" : campusCenters[campus].label}</strong>
-              <span>
-                Google Maps APIキー未設定でも、検索・フィルタ・施設情報・外部地図リンクは確認できます。
-              </span>
+              <span>{fallbackMapDescription}</span>
             </div>
             {mapBoundsFacilities.length > 0 ? (
               mapBoundsFacilities.map((facility) => {
@@ -2660,8 +2865,8 @@ export default function ShindaiMapApp({
                 className="fallback-current-location"
                 style={getFallbackPointPosition(transitPosition, fallbackReferencePositions)}
                 role="img"
-                aria-label="現在地"
-                title="現在地"
+                aria-label={currentLocationTitle(currentLocation)}
+                title={currentLocationTitle(currentLocation)}
               >
                 <span />
               </div>

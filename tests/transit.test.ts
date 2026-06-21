@@ -10,6 +10,14 @@ import {
   type TransitStop
 } from "../src/lib/transit";
 
+const testSourceMetadata = {
+  sourceType: "official-transit",
+  sourceName: "テスト交通情報",
+  sourceUrl: "https://example.com",
+  verifiedAt: "2026-06-01",
+  confidence: "medium"
+} as const;
+
 describe("transit helpers", () => {
   it("covers the required bus and train operators", () => {
     const operators = new Set(transitStops.map((stop) => stop.operator));
@@ -139,6 +147,7 @@ describe("transit helpers", () => {
       position: { lat: 34.7, lng: 135.2 },
       timetableUrl: "https://example.com",
       note: "test",
+      ...testSourceMetadata,
       schedule: {
         weekday: ["09:10"],
         weekend: ["09:10"]
@@ -231,6 +240,7 @@ describe("transit helpers", () => {
       position: { lat: 34.7, lng: 135.2 },
       timetableUrl: "https://example.com",
       note: "test",
+      ...testSourceMetadata,
       schedule: {
         weekday: ["09:05"],
         weekend: ["09:20"],
@@ -266,6 +276,7 @@ describe("transit helpers", () => {
       position: { lat: 34.7, lng: 135.2 },
       timetableUrl: "https://example.com",
       note: "test",
+      ...testSourceMetadata,
       schedule: {
         weekday: ["05:00", "23:50", "24:15"],
         weekend: ["05:30", "24:30"],

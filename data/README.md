@@ -14,6 +14,21 @@
 
 座標データは`src/data/*.json`に分離して管理します。公式地図番号のピンは`officialFacilities.json`、AEDは`aedLocations.json`、キャンパスマップ画像のアイコン由来POIは`mapFeatures.json`、交通カードと地図に出すバス停・鉄道駅は`transitStops.json`を編集してください。各レコードには施設ID、名称、キャンパス、緯度、経度、出典区分、任意の公式地図番号や設置場所情報だけを記述します。仮置きのローカル座標データは`facilities`の出力に含めず、共通の説明文や検索タグはTypeScript側で組み立てます。
 
+## 出典メタデータ
+
+`src/data`の施設/AED/交通データは、変換後の`Facility`または`TransitStop`で次の出典メタデータを必ず持ちます。
+
+- `sourceType`: 出典種別。現在は`official-page`、`official-pdf`、`official-campus-map`、`official-map-image`、`official-transit`、`generated-transit`、`field-survey`、`community-report`を使えます。
+- `sourceName`: ユーザーに表示する出典名。
+- `sourceUrl`: 公式ページ、PDF、停留所ページ、駅ページなど、確認に使ったURL。公開URLがない現地確認だけ任意です。
+- `verifiedAt`: ShindaiMap側でその出典を確認した日付。`YYYY-MM-DD`で記録します。
+- `confidence`: 位置や設置情報への信頼度。`high`は公式番号・公式停留所地図などの直接根拠、`medium`は公式画像からの座標変換や建物代表点、`low`は限定的な根拠、`unverified`は表示前の未確認候補に使います。
+- `sourceNote`: RMSE、建物代表点、基準日など、画面にも出してよい短い補足。
+
+既存JSONは、`sourceArea`、`positionSourceUrl`、`positionSourceName`、`updatedAt`などから`src/data/sourceMetadata.ts`と各変換層がメタデータを補完します。公式データを差し替えるときは、可能ならJSONレコード側に`sourceType`、`sourceName`、`sourceUrl`、`verifiedAt`、`confidence`を明示してください。個別レコードに明示した値は既定値より優先されます。
+
+`updatedAt`と`source`は既存コードとの互換用に残します。新しい実装やUIでは、原則として`verifiedAt`、`sourceName`、`sourceUrl`、`confidence`を参照してください。
+
 `mapFeatures.json`は手書きではなく、公式画像上のピクセル座標と番号付き施設ピンの制御点から[`../scripts/generate-map-features.py`](../scripts/generate-map-features.py)で生成します。アイコンを追加・修正する場合は、同スクリプト内の`FEATURES`に画像上の中心座標を追加し、生成後の`transformRmseMeters`を確認してください。
 
 AEDは公開されている神戸大学AED設置場所一覧に記載されたものを`aedLocations.json`へ入れます。座標は公式番号施設に対応するものは施設代表点を使い、公式番号施設に対応しないものはAEDマップ画像上のアイコン中心を公式番号ピン制御点で座標変換します。2025年3月24日現在の公開一覧と楠地区キャンパスマップには楠地区のAED設置場所が載っていないため、楠地区のAEDピンは未確認データとして追加しません。
@@ -51,6 +66,8 @@ AEDは公開されている神戸大学AED設置場所一覧に記載された�
 ## 変更方針
 
 - 公開情報または現地確認に基づき、出典と確認日をPull Requestへ記載してください。
+- データを追加・差し替えたレコードには、`sourceType`、`sourceName`、`sourceUrl`、`verifiedAt`、`confidence`を確認し、既定値で十分でない場合はJSON側で明示してください。
+- `confidence`を`high`にできるのは、公式番号、公式AED一覧、公式停留所地図、事業者駅ページなど、対象物と位置が直接確認できる場合だけです。画像変換、建物代表点、時刻表生成データは根拠を`sourceNote`へ残してください。
 - 公式キャンパスマップ画像から座標を更新する場合は、`scripts/audit-official-map-data.py`で公式番号表との差分と画像上の検出根拠を確認してください。
 - 駐輪場、駐車場、階段、急な傾斜道などの画像アイコン由来POIを更新する場合は、`scripts/generate-map-features.py`で再生成し、JSONに画像ピクセルと変換RMSEを残してください。
 - 個人情報、非公開の研究室情報、立入制限区域の詳細などは追加しないでください。

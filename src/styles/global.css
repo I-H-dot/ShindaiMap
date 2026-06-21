@@ -416,6 +416,53 @@ a {
   line-height: 1.62;
 }
 
+.source-panel {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.source-panel-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.source-label {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.source-panel a,
+.source-panel strong {
+  color: var(--accent-strong);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.source-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.source-facts span {
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: rgba(15, 23, 42, 0.06);
+  white-space: nowrap;
+}
+
+.source-panel .source-note {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
 .action-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
