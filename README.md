@@ -3,6 +3,8 @@
 [![CI](https://github.com/I-H-dot/ShindaiMap/actions/workflows/ci.yml/badge.svg)](https://github.com/I-H-dot/ShindaiMap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+[神大Mapを開く](https://i-h-dot.github.io/ShindaiMap/)
+
 神戸大学の公式地図番号、教室、図書館、トイレ、休憩場所、ラーニングコモンズ、ATM、ポスト、バス停などを1画面で探すためのWebマップです。
 
 > [!IMPORTANT]

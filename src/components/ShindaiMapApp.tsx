@@ -2450,7 +2450,7 @@ export default function ShindaiMapApp({
             </div>
             <div>
               <h1 className="brand-title">神大Map</h1>
-              <p className="brand-subtitle">教室・トイレ・ラーコモを1画面で探す</p>
+              <p className="brand-subtitle">神戸大学の地図・キャンパスマップ</p>
             </div>
           </div>
           <button

@@ -13,9 +13,10 @@ export function getStaticPaths() {
 
 const { category } = Astro.props;
 const matchingFacilities = facilities.filter((facility) => facility.category === category.id);
-const description = `${category.label} | 神大Map`;
+const title = `${category.label} | 神戸大学キャンパスマップ | 神大Map`;
+const description = `神大Mapの${category.label}一覧です。神戸大学の地図・キャンパスマップで${matchingFacilities.length}件の${category.label}を確認できます。${category.description}`;
 ---
-<BaseLayout title={`${category.label} | 神大Map`} description={description} canonicalPath={`/categories/${category.id}/`}>
+<BaseLayout title={title} description={description} canonicalPath={`/categories/${category.id}/`}>
   <main class="article-page">
     <a class="article-back" href={withBasePath(`/?category=${category.id}`)}>地図で見る</a>
     <section class="article-hero">

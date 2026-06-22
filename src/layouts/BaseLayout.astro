@@ -2,20 +2,104 @@
 import "../styles/global.css";
 import { withBasePath } from "../lib/urls";
 
+type StructuredData = Record<string, unknown>;
+
 interface Props {
   title: string;
   description: string;
   canonicalPath?: string;
+  structuredData?: StructuredData | StructuredData[];
 }
 
 const {
   title,
   description,
-  canonicalPath = Astro.url.pathname
+  canonicalPath = Astro.url.pathname,
+  structuredData
 } = Astro.props;
 
 const site = Astro.site?.toString().replace(/\/$/, "") || "http://localhost:4321";
 const canonicalUrl = `${site}${withBasePath(canonicalPath)}`;
+const homeUrl = `${site}${withBasePath("/")}`;
+const siteName = "神大Map";
+const siteAlternateNames = ["神大マップ", "神戸大学キャンパスマップ", "神戸大学 地図"];
+const repositoryUrl = "https://github.com/I-H-dot/ShindaiMap";
+const appDescription =
+  "神戸大学の公式地図番号、教室、AED、駐輪場、ATM、食堂・売店、バス停、鉄道駅を探せる地図・キャンパスマップ。";
+const searchUrlTemplate = `${homeUrl}?query={search_term_string}`;
+const extraStructuredData = structuredData
+  ? Array.isArray(structuredData)
+    ? structuredData
+    : [structuredData]
+  : [];
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${homeUrl}#website`,
+      name: siteName,
+      alternateName: siteAlternateNames,
+      description: appDescription,
+      inLanguage: "ja",
+      url: homeUrl,
+      sameAs: [repositoryUrl],
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: searchUrlTemplate
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "WebApplication",
+      "@id": `${homeUrl}#webapp`,
+      name: siteName,
+      alternateName: siteAlternateNames,
+      applicationCategory: "NavigationApplication",
+      operatingSystem: "Web",
+      isAccessibleForFree: true,
+      inLanguage: "ja",
+      description: appDescription,
+      url: homeUrl,
+      sameAs: [repositoryUrl],
+      browserRequirements: "JavaScript対応ブラウザ。Google Maps APIキー未設定時もフォールバック地図で利用できます。",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "JPY"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${canonicalUrl}#webpage`,
+      name: title,
+      description,
+      inLanguage: "ja",
+      url: canonicalUrl,
+      isPartOf: {
+        "@id": `${homeUrl}#website`
+      },
+      about: [
+        {
+          "@type": "Thing",
+          name: "神戸大学 地図"
+        },
+        {
+          "@type": "Thing",
+          name: "神戸大学キャンパスマップ"
+        },
+        {
+          "@type": "Thing",
+          name: "神大マップ"
+        }
+      ]
+    },
+    ...extraStructuredData
+  ]
+};
 ---
 <!doctype html>
 <html lang="ja">
@@ -23,6 +107,8 @@ const canonicalUrl = `${site}${withBasePath(canonicalPath)}`;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content={description} />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="application-name" content={siteName} />
     <meta name="theme-color" content="#f7f3ea" />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="preconnect" href="https://maps.googleapis.com" />
@@ -32,16 +118,12 @@ const canonicalUrl = `${site}${withBasePath(canonicalPath)}`;
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:site_name" content="神大Map" />
-    <script is:inline type="application/ld+json" set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      name: "神大Map",
-      applicationCategory: "NavigationApplication",
-      operatingSystem: "Web",
-      description,
-      url: canonicalUrl
-    })} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content="ja_JP" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
   <body>
     <slot />
