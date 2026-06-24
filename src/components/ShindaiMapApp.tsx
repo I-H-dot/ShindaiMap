@@ -573,8 +573,14 @@ const getFallbackPointPosition = (position: LatLng, referencePositions: LatLng[]
     9;
 
   return {
-    left: `${Math.max(4, Math.min(96, left))}%`,
-    top: `${Math.max(4, Math.min(96, top))}%`
+    left: `clamp(var(--fallback-pin-edge-inset), ${Math.max(
+      4,
+      Math.min(96, left)
+    )}%, calc(100% - var(--fallback-pin-edge-inset)))`,
+    top: `clamp(var(--fallback-pin-edge-inset), ${Math.max(
+      4,
+      Math.min(96, top)
+    )}%, calc(100% - var(--fallback-pin-edge-inset)))`
   };
 };
 

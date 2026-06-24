@@ -592,6 +592,7 @@ a {
 }
 
 .fallback-map {
+  --fallback-pin-edge-inset: calc(var(--tune-pin-active-size) / 2 + 8px);
   overflow: hidden;
   background:
     linear-gradient(90deg, rgba(148, 163, 184, 0.12) 0 1px, transparent 1px 100%),
@@ -1620,7 +1621,7 @@ a {
   body {
     width: 100%;
     max-width: 100vw;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .map-shell,
@@ -1721,27 +1722,23 @@ a {
   }
 
   .search-toolbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
     align-items: center;
+    row-gap: 8px;
     gap: 8px;
     width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .search-toolbar::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
   }
 
   .search-box {
-    flex: 1 1 auto;
+    grid-column: 1;
     min-width: 0;
   }
 
   .search-card.filters-open .search-box {
-    flex: 1 1 76px;
-    max-width: 28vw;
+    max-width: 100%;
   }
 
   .search-box input {
@@ -1762,19 +1759,19 @@ a {
   }
 
   .control-grid {
-    flex: 0 0 auto;
-    width: auto;
-    max-width: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
     display: none;
-    align-items: center;
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
     margin-top: 0;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .mobile-filter-toggle {
     display: inline-flex;
-    flex: 0 0 42px;
+    grid-column: 2;
     width: 42px;
     min-height: 42px;
     margin-top: 0;
@@ -1787,17 +1784,19 @@ a {
   }
 
   .search-card.filters-open .control-grid {
-    display: flex;
+    display: grid;
   }
 
   .field-label {
-    flex: 0 0 auto;
     min-width: 0;
     color: transparent;
     font-size: 0;
   }
 
   .field-label select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 42px;
     border-radius: 999px;
     padding: 0 22px 0 10px;
@@ -1807,13 +1806,13 @@ a {
   }
 
   .field-label:first-child select {
-    width: 92px;
-    min-width: 92px;
+    width: 100%;
+    min-width: 0;
   }
 
   .field-label:last-child select {
-    width: 84px;
-    min-width: 84px;
+    width: 100%;
+    min-width: 0;
     color: #073b86;
   }
 
@@ -1830,6 +1829,7 @@ a {
   }
 
   .fallback-map {
+    --fallback-pin-edge-inset: calc(var(--tune-mobile-active-pin-size) / 2 + 18px);
     background:
       linear-gradient(90deg, rgba(148, 163, 184, 0.14) 0 1px, transparent 1px 100%),
       linear-gradient(0deg, rgba(148, 163, 184, 0.12) 0 1px, transparent 1px 100%),
@@ -1873,7 +1873,7 @@ a {
 
   .map-locate-button {
     top: 16px;
-    right: 16px;
+    right: max(16px, env(safe-area-inset-right));
     bottom: auto;
     left: auto;
     z-index: 35;
@@ -1884,12 +1884,12 @@ a {
   .selected-card {
     display: block;
     position: fixed;
-    right: auto;
+    right: 0;
     bottom: 0;
     left: 0;
     z-index: 30;
-    width: 100%;
-    max-width: 100%;
+    width: auto;
+    max-width: 100dvw;
     --mobile-panel-peek-height: var(--tune-mobile-panel-peek);
     --mobile-panel-offset: 0;
     max-height: min(var(--tune-mobile-panel-max-height), 640px);
@@ -1898,7 +1898,10 @@ a {
     overscroll-behavior: contain;
     border-width: 1px 0 0;
     border-radius: var(--tune-mobile-panel-radius) var(--tune-mobile-panel-radius) 0 0;
-    padding: 30px 12px calc(20px + env(safe-area-inset-bottom));
+    padding:
+      30px max(12px, env(safe-area-inset-right))
+      calc(20px + env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
     background: #fff;
     box-shadow: 0 -18px 42px rgba(15, 23, 42, 0.18);
     transform: translateY(var(--mobile-panel-offset));
